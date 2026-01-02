@@ -17,7 +17,7 @@ import { mockCustomers, formatCurrency } from '@/data/mock-data';
 
 export default function AdminCustomersPage() {
   const totalBalance = mockCustomers.reduce((sum, c) => sum + c.balance, 0);
-  const totalCards = mockCustomers.reduce((sum, c) => sum + c.totalCards, 0);
+  const totalCards = mockCustomers.reduce((sum, c) => sum + c.rfidCards.length, 0);
 
   return (
     <MainLayout userType="admin">
@@ -105,7 +105,7 @@ export default function AdminCustomersPage() {
                     <TableCell className="font-mono text-sm">{customer.virtualAccountNumber}</TableCell>
                     <TableCell className="font-medium">{formatCurrency(customer.balance)}</TableCell>
                     <TableCell>
-                      <Badge variant="outline">{customer.totalCards} kartu</Badge>
+                      <Badge variant="outline">{customer.rfidCards.length} kartu</Badge>
                     </TableCell>
                     <TableCell className="text-sm text-gray-500">
                       {new Date(customer.createdAt).toLocaleDateString('id-ID')}

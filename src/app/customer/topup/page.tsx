@@ -1,248 +1,290 @@
 'use client';
 
 import { useState } from 'react';
+import { useStore } from '@/store/useStore';
+import { formatCurrency, bankCodes } from '@/data/mock-data';
 import { MainLayout } from '@/components/layout/MainLayout';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { formatCurrency } from '@/data/mock-data';
-import { useStore, generateTransactionId, generateXenditId } from '@/store/useStore';
-import { Transaction } from '@/types';
+import {
+  CreditCard,
+  ArrowRight,
+  CheckCircle2,
+  Clock,
+  Upload,
+  Building2,
+  Calendar,
+  FileText,
+} from 'lucide-react';
+
+type Step = 'form' | 'confirm' | 'success';
 
 export default function TopUpPage() {
-  const [step, setStep] = useState<'info' | 'transfer' | 'success'>('info');
-  const [amount, setAmount] = useState<string>('');
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [lastXenditId, setLastXenditId] = useState<string>('');
-
-  // Get state and actions from store
   const customer = useStore((state) => state.customer);
-  const addTransaction = useStore((state) => state.addTransaction);
-  const updateCustomerBalance = useStore((state) => state.updateCustomerBalance);
+  const addWebreportSubmission = useStore((state) => state.addWebreportSubmission);
 
-  const quickAmounts = [500000, 1000000, 2000000, 5000000, 10000000];
+  const [step, setStep] = useState<Step>('form');
+  const [amount, setAmount] = useState('');
+  const [bankSender, setBankSender] = useState('');
+  const [transferDate, setTransferDate] = useState(new Date().toISOString().split('T')[0]);
+  const [notes, setNotes] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submissionId, setSubmissionId] = useState('');
 
-  const handleSimulatePayment = () => {
-    setIsProcessing(true);
-    
-    // Simulate webhook callback from Xendit (3 second delay)
-    setTimeout(() => {
-      const xenditId = generateXenditId();
-      const now = new Date().toISOString();
-      
-      // Create new transaction
-      const newTransaction: Transaction = {
-        id: generateTransactionId(),
-        customerId: customer.id,
-        customerName: customer.companyName,
-        virtualAccountNumber: customer.virtualAccountNumber,
-        amount: Number(amount),
-        status: 'success',
-        paymentMethod: 'Virtual Account',
-        bankCode: 'BCA',
-        xenditPaymentId: xenditId,
-        paidAt: now,
-        createdAt: now,
-        updatedAt: now,
-      };
+  const quickAmounts = [1000000, 2000000, 5000000, 10000000];
 
-      // Add transaction to store (will appear in admin dashboard)
-      addTransaction(newTransaction);
-      
-      // Update customer balance
-      updateCustomerBalance(Number(amount));
-      
-      // Save xendit ID for display
-      setLastXenditId(xenditId);
-      
-      setIsProcessing(false);
-      setStep('success');
-    }, 3000);
+  const handleSubmit = () => {
+    if (!amount || !bankSender || !transferDate) return;
+    setStep('confirm');
+  };
+
+  const handleConfirmSubmit = async () => {
+    setIsSubmitting(true);
+
+    // Simulate API call delay
+    await new Promise((resolve) => setTimeout(resolve, 1500));
+
+    const submission = addWebreportSubmission({
+      customerId: customer.id,
+      customerName: customer.companyName,
+      virtualAccountNumber: customer.virtualAccountNumber,
+      amount: Number(amount),
+      transferDate: new Date(transferDate).toISOString(),
+      bankSender,
+      notes: notes || undefined,
+    });
+
+    setSubmissionId(submission.id);
+    setIsSubmitting(false);
+    setStep('success');
+  };
+
+  const handleReset = () => {
+    setStep('form');
+    setAmount('');
+    setBankSender('');
+    setTransferDate(new Date().toISOString().split('T')[0]);
+    setNotes('');
+    setSubmissionId('');
   };
 
   return (
     <MainLayout userType="customer">
-      <div className="mx-auto max-w-2xl space-y-6">
-        {/* Page Header */}
+      <div className="max-w-2xl mx-auto space-y-6">
+        {/* Header */}
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Top-Up Saldo</h1>
-          <p className="text-gray-500">Tambah saldo deposit RFID Anda</p>
+          <h1 className="text-2xl font-bold">Lapor Top-Up Saldo</h1>
+          <p className="text-muted-foreground">
+            Laporkan transfer top-up saldo RFID Anda
+          </p>
         </div>
 
-        {/* Current Balance */}
-        <Card className="border-pertamina-red bg-gradient-to-r from-red-50 to-white">
-          <CardContent className="py-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-500">Saldo Saat Ini</p>
-                <p className="text-2xl font-bold text-gray-900">
-                  {formatCurrency(customer.balance)}
-                </p>
-              </div>
-              <Badge className="bg-pertamina-red">Fixed VA</Badge>
+        {/* VA Info Card */}
+        <Card className="bg-gradient-to-r from-blue-600 to-blue-800 text-white">
+          <CardContent className="p-6">
+            <div className="flex items-center gap-2 mb-2">
+              <CreditCard className="h-5 w-5" />
+              <span className="text-sm opacity-90">Virtual Account Anda</span>
             </div>
+            <p className="text-2xl font-mono font-bold tracking-wider">
+              {customer.virtualAccountNumber}
+            </p>
+            <p className="text-sm mt-2 opacity-90">{customer.companyName}</p>
           </CardContent>
         </Card>
 
-        {step === 'info' && (
+        {/* Step: Form */}
+        {step === 'form' && (
           <Card>
             <CardHeader>
-              <CardTitle>Informasi Virtual Account</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <Upload className="h-5 w-5" />
+                Form Pelaporan Transfer
+              </CardTitle>
+              <CardDescription>
+                Isi detail transfer yang sudah Anda lakukan
+              </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="rounded-lg border-2 border-dashed border-pertamina-blue bg-blue-50 p-4">
-                <p className="text-sm text-gray-600">Nomor Virtual Account Anda</p>
-                <div className="mt-2 flex items-center justify-between">
-                  <p className="text-2xl font-mono font-bold text-pertamina-blue">
-                    {customer.virtualAccountNumber}
-                  </p>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => navigator.clipboard.writeText(customer.virtualAccountNumber)}
-                  >
-                    Salin
-                  </Button>
-                </div>
-                <p className="mt-2 text-sm text-gray-500">Bank: BCA (Xendit)</p>
-              </div>
-
-              <div className="space-y-3">
-                <h3 className="font-medium text-gray-900">Cara Top-Up:</h3>
-                <ol className="list-inside list-decimal space-y-2 text-sm text-gray-600">
-                  <li>Transfer ke nomor VA di atas melalui ATM, Mobile Banking, atau Internet Banking</li>
-                  <li>Masukkan nominal yang ingin di top-up (minimal Rp 100.000)</li>
-                  <li>Selesaikan pembayaran</li>
-                  <li>Saldo akan otomatis bertambah dalam hitungan detik</li>
-                </ol>
-              </div>
-
-              <div className="rounded-lg bg-green-50 p-4">
-                <p className="text-sm font-medium text-green-800">
-                  Saldo otomatis masuk tanpa perlu upload bukti transfer!
-                </p>
-                <p className="mt-1 text-xs text-green-600">
-                  Sistem pembayaran terintegrasi dengan Xendit Payment Gateway
-                </p>
-              </div>
-
-              <Button
-                className="w-full bg-pertamina-red hover:bg-red-700"
-                onClick={() => setStep('transfer')}
-              >
-                Lanjut ke Simulasi Transfer
-              </Button>
-            </CardContent>
-          </Card>
-        )}
-
-        {step === 'transfer' && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Simulasi Pembayaran</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <p className="text-sm text-gray-500">
-                Demo: Pilih nominal untuk simulasi pembayaran via Xendit
-              </p>
-
-              <div className="grid grid-cols-3 gap-2">
-                {quickAmounts.map((amt) => (
-                  <Button
-                    key={amt}
-                    variant={amount === String(amt) ? 'default' : 'outline'}
-                    className={amount === String(amt) ? 'bg-pertamina-red' : ''}
-                    onClick={() => setAmount(String(amt))}
-                  >
-                    {formatCurrency(amt)}
-                  </Button>
-                ))}
-              </div>
-
-              <div>
-                <label className="text-sm font-medium text-gray-700">
-                  Atau masukkan nominal lain:
-                </label>
+            <CardContent className="space-y-6">
+              {/* Amount */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Nominal Transfer</label>
                 <Input
                   type="number"
                   placeholder="Masukkan nominal"
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
-                  className="mt-1"
+                  className="text-lg"
+                />
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {quickAmounts.map((qa) => (
+                    <Button
+                      key={qa}
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setAmount(qa.toString())}
+                      className={amount === qa.toString() ? 'border-primary' : ''}
+                    >
+                      {formatCurrency(qa)}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Bank Sender */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium flex items-center gap-2">
+                  <Building2 className="h-4 w-4" />
+                  Bank Pengirim
+                </label>
+                <select
+                  value={bankSender}
+                  onChange={(e) => setBankSender(e.target.value)}
+                  className="w-full h-10 px-3 rounded-md border border-input bg-background"
+                >
+                  <option value="">Pilih bank...</option>
+                  {bankCodes.map((bank) => (
+                    <option key={bank.code} value={bank.code}>
+                      {bank.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Transfer Date */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium flex items-center gap-2">
+                  <Calendar className="h-4 w-4" />
+                  Tanggal Transfer
+                </label>
+                <Input
+                  type="date"
+                  value={transferDate}
+                  onChange={(e) => setTransferDate(e.target.value)}
+                  max={new Date().toISOString().split('T')[0]}
                 />
               </div>
 
-              {amount && (
-                <div className="rounded-lg bg-gray-50 p-4">
-                  <p className="text-sm text-gray-600">Total Transfer:</p>
-                  <p className="text-xl font-bold text-gray-900">
-                    {formatCurrency(Number(amount))}
-                  </p>
-                </div>
-              )}
-
-              <div className="flex gap-2">
-                <Button variant="outline" onClick={() => setStep('info')}>
-                  Kembali
-                </Button>
-                <Button
-                  className="flex-1 bg-pertamina-red hover:bg-red-700"
-                  disabled={!amount || isProcessing}
-                  onClick={handleSimulatePayment}
-                >
-                  {isProcessing ? 'Memproses Pembayaran...' : 'Simulasi Bayar via Xendit'}
-                </Button>
+              {/* Notes */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium flex items-center gap-2">
+                  <FileText className="h-4 w-4" />
+                  Catatan (Opsional)
+                </label>
+                <Input
+                  placeholder="Contoh: Transfer untuk top-up bulan Januari"
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                />
               </div>
 
-              {isProcessing && (
-                <div className="rounded-lg bg-yellow-50 p-4 text-center">
-                  <p className="text-sm font-medium text-yellow-800">
-                    Menunggu konfirmasi dari Xendit...
-                  </p>
-                  <p className="mt-1 text-xs text-yellow-600">
-                    Webhook callback sedang diproses
-                  </p>
-                </div>
-              )}
+              {/* Submit Button */}
+              <Button
+                onClick={handleSubmit}
+                disabled={!amount || !bankSender || !transferDate}
+                className="w-full"
+                size="lg"
+              >
+                Lanjutkan
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
             </CardContent>
           </Card>
         )}
 
+        {/* Step: Confirm */}
+        {step === 'confirm' && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Konfirmasi Pelaporan</CardTitle>
+              <CardDescription>
+                Pastikan data berikut sudah benar
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="bg-muted p-4 rounded-lg space-y-3">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Virtual Account</span>
+                  <span className="font-mono">{customer.virtualAccountNumber}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Nominal</span>
+                  <span className="font-bold text-lg">{formatCurrency(Number(amount))}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Bank Pengirim</span>
+                  <span>{bankCodes.find((b) => b.code === bankSender)?.name}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Tanggal Transfer</span>
+                  <span>{new Date(transferDate).toLocaleDateString('id-ID')}</span>
+                </div>
+                {notes && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Catatan</span>
+                    <span>{notes}</span>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex gap-3">
+                <Button variant="outline" onClick={() => setStep('form')} className="flex-1">
+                  Kembali
+                </Button>
+                <Button onClick={handleConfirmSubmit} disabled={isSubmitting} className="flex-1">
+                  {isSubmitting ? 'Mengirim...' : 'Kirim Laporan'}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Step: Success */}
         {step === 'success' && (
-          <Card className="border-green-200 bg-green-50">
-            <CardContent className="py-8 text-center">
-              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
-                <span className="text-2xl text-green-600">OK</span>
+          <Card className="border-green-200 bg-green-50 dark:bg-green-950/20">
+            <CardContent className="p-6 text-center space-y-4">
+              <div className="flex justify-center">
+                <div className="h-16 w-16 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center">
+                  <CheckCircle2 className="h-8 w-8 text-green-600" />
+                </div>
               </div>
-              <h2 className="text-xl font-bold text-green-800">
-                Top-Up Berhasil!
-              </h2>
-              <p className="mt-2 text-green-600">
-                Saldo Anda telah bertambah {formatCurrency(Number(amount))}
-              </p>
-              <div className="mt-4 rounded-lg bg-white p-4">
-                <p className="text-sm text-gray-500">Saldo Terbaru</p>
-                <p className="text-2xl font-bold text-gray-900">
-                  {formatCurrency(customer.balance)}
+
+              <div>
+                <h2 className="text-xl font-bold text-green-800 dark:text-green-200">
+                  Laporan Berhasil Dikirim!
+                </h2>
+                <p className="text-green-700 dark:text-green-300 mt-1">
+                  Laporan top-up Anda sedang diproses
                 </p>
               </div>
-              <div className="mt-4 rounded-lg bg-blue-50 p-3">
-                <p className="text-xs text-blue-800">
-                  Xendit Payment ID: {lastXenditId}
-                </p>
+
+              <div className="bg-white dark:bg-background p-4 rounded-lg space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">ID Laporan</span>
+                  <span className="font-mono font-medium">{submissionId}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Nominal</span>
+                  <span className="font-bold">{formatCurrency(Number(amount))}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Status</span>
+                  <Badge variant="secondary" className="gap-1">
+                    <Clock className="h-3 w-3" />
+                    Menunggu Verifikasi
+                  </Badge>
+                </div>
               </div>
-              <p className="mt-4 text-sm text-green-700">
-                Transaksi ini sudah muncul di Dashboard Admin!
+
+              <p className="text-sm text-muted-foreground">
+                Saldo akan bertambah otomatis setelah sistem mencocokkan 
+                laporan Anda dengan data rekening koran bank.
               </p>
-              <Button
-                className="mt-6 bg-pertamina-red hover:bg-red-700"
-                onClick={() => {
-                  setStep('info');
-                  setAmount('');
-                }}
-              >
-                Top-Up Lagi
+
+              <Button onClick={handleReset} className="w-full">
+                Buat Laporan Baru
               </Button>
             </CardContent>
           </Card>

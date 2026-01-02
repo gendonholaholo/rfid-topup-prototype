@@ -7,8 +7,8 @@ import { Button } from '@/components/ui/button';
 import { mockRFIDCards } from '@/data/mock-data';
 
 export default function CardsPage() {
-  const activeCards = mockRFIDCards.filter((c) => c.isActive).length;
-  const inactiveCards = mockRFIDCards.filter((c) => !c.isActive).length;
+  const activeCards = mockRFIDCards.filter((c) => c.status === 'active').length;
+  const inactiveCards = mockRFIDCards.filter((c) => c.status !== 'active').length;
 
   return (
     <MainLayout userType="customer">
@@ -80,12 +80,14 @@ export default function CardsPage() {
                   <div className="flex items-center gap-3">
                     <Badge
                       className={
-                        card.isActive
+                        card.status === 'active'
                           ? 'bg-green-100 text-green-800'
+                          : card.status === 'blocked'
+                          ? 'bg-red-100 text-red-800'
                           : 'bg-gray-100 text-gray-600'
                       }
                     >
-                      {card.isActive ? 'Aktif' : 'Tidak Aktif'}
+                      {card.status === 'active' ? 'Aktif' : card.status === 'blocked' ? 'Diblokir' : 'Tidak Aktif'}
                     </Badge>
                     <Button variant="outline" size="sm">
                       Detail

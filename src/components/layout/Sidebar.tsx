@@ -19,6 +19,9 @@ const customerNavItems: NavItem[] = [
 
 const adminNavItems: NavItem[] = [
   { href: '/admin', label: 'Dashboard', icon: 'D' },
+  { href: '/admin/bank-api', label: 'Bank API', icon: 'A' },
+  { href: '/admin/file-import', label: 'File Import', icon: 'F' },
+  { href: '/admin/matching', label: 'Matching', icon: 'M' },
   { href: '/admin/transactions', label: 'Transaksi', icon: 'T' },
   { href: '/admin/customers', label: 'Pelanggan', icon: 'P' },
 ];

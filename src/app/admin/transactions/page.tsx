@@ -13,16 +13,19 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { mockTransactions, formatCurrency } from '@/data/mock-data';
+import { formatCurrency, formatDate } from '@/data/mock-data';
+import { useStore } from '@/store/useStore';
 
 export default function AdminTransactionsPage() {
+  const transactions = useStore((state) => state.transactions);
+
   return (
     <MainLayout userType="admin">
       <div className="space-y-6">
         {/* Page Header */}
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Daftar Transaksi</h1>
-          <p className="text-gray-500">Semua transaksi top-up RFID</p>
+          <p className="text-gray-500">Semua transaksi top-up RFID yang terverifikasi</p>
         </div>
 
         {/* Filter */}
@@ -47,61 +50,59 @@ export default function AdminTransactionsPage() {
         {/* Transactions Table */}
         <Card>
           <CardHeader>
-            <CardTitle>Transaksi ({mockTransactions.length})</CardTitle>
+            <CardTitle>Transaksi ({transactions.length})</CardTitle>
           </CardHeader>
           <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>ID</TableHead>
-                  <TableHead>Pelanggan</TableHead>
-                  <TableHead>VA</TableHead>
-                  <TableHead>Bank</TableHead>
-                  <TableHead>Nominal</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Waktu Dibuat</TableHead>
-                  <TableHead>Waktu Bayar</TableHead>
-                  <TableHead>Xendit ID</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {mockTransactions.map((trx) => (
-                  <TableRow key={trx.id}>
-                    <TableCell className="font-mono text-sm">{trx.id}</TableCell>
-                    <TableCell className="font-medium">{trx.customerName}</TableCell>
-                    <TableCell className="font-mono text-sm">{trx.virtualAccountNumber}</TableCell>
-                    <TableCell>{trx.bankCode}</TableCell>
-                    <TableCell className="font-medium">{formatCurrency(trx.amount)}</TableCell>
-                    <TableCell>
-                      <Badge
-                        className={
-                          trx.status === 'success'
-                            ? 'bg-green-100 text-green-800'
-                            : trx.status === 'pending'
-                            ? 'bg-yellow-100 text-yellow-800'
-                            : 'bg-red-100 text-red-800'
-                        }
-                      >
-                        {trx.status === 'success'
-                          ? 'Berhasil'
-                          : trx.status === 'pending'
-                          ? 'Menunggu'
-                          : 'Gagal'}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-sm text-gray-500">
-                      {new Date(trx.createdAt).toLocaleString('id-ID')}
-                    </TableCell>
-                    <TableCell className="text-sm text-gray-500">
-                      {trx.paidAt ? new Date(trx.paidAt).toLocaleString('id-ID') : '-'}
-                    </TableCell>
-                    <TableCell className="font-mono text-xs text-gray-500">
-                      {trx.xenditPaymentId || '-'}
-                    </TableCell>
+            {transactions.length === 0 ? (
+              <div className="py-8 text-center text-muted-foreground">
+                Belum ada transaksi terverifikasi
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>ID</TableHead>
+                    <TableHead>Pelanggan</TableHead>
+                    <TableHead>VA</TableHead>
+                    <TableHead>Bank</TableHead>
+                    <TableHead className="text-right">Nominal</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Waktu</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {transactions.map((trx) => (
+                    <TableRow key={trx.id}>
+                      <TableCell className="font-mono text-sm">{trx.id}</TableCell>
+                      <TableCell className="font-medium">{trx.customerName}</TableCell>
+                      <TableCell className="font-mono text-sm">{trx.virtualAccountNumber}</TableCell>
+                      <TableCell>{trx.bankCode}</TableCell>
+                      <TableCell className="text-right font-medium">{formatCurrency(trx.amount)}</TableCell>
+                      <TableCell>
+                        <Badge
+                          className={
+                            trx.status === 'success'
+                              ? 'bg-green-500'
+                              : trx.status === 'pending'
+                              ? 'bg-yellow-500'
+                              : 'bg-red-500'
+                          }
+                        >
+                          {trx.status === 'success'
+                            ? 'Berhasil'
+                            : trx.status === 'pending'
+                            ? 'Menunggu'
+                            : 'Gagal'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        {formatDate(trx.createdAt)}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
           </CardContent>
         </Card>
 
@@ -109,8 +110,8 @@ export default function AdminTransactionsPage() {
         <Card className="border-dashed bg-blue-50">
           <CardContent className="py-4">
             <p className="text-sm text-pertamina-blue">
-              <span className="font-medium">Info:</span> Semua transaksi diverifikasi otomatis oleh Xendit. 
-              Tim keuangan tidak perlu melakukan approval manual seperti di sistem IMPAZZ sebelumnya.
+              <span className="font-medium">Info:</span> Transaksi diverifikasi melalui Automation Engine
+              yang mencocokkan data Webreport dengan Rekening Koran bank.
             </p>
           </CardContent>
         </Card>

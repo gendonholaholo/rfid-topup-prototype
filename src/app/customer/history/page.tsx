@@ -71,9 +71,9 @@ export default function HistoryPage() {
                           minute: '2-digit',
                         })}
                       </p>
-                      {trx.xenditPaymentId && (
+                      {trx.matchingResultId && (
                         <p className="mt-1 font-mono text-xs text-gray-400">
-                          {trx.xenditPaymentId}
+                          Ref: {trx.matchingResultId}
                         </p>
                       )}
                     </div>
