@@ -1,16 +1,16 @@
 # RFID Top-Up Prototype
 
-Prototype aplikasi untuk demonstrasi integrasi Xendit Payment Gateway dengan sistem top-up saldo RFID Pertamina Retail.
+Prototype aplikasi untuk demonstrasi Automation Engine verifikasi top-up saldo RFID Pertamina Retail.
 
 ## Tentang Proyek
 
-Aplikasi ini mendemonstrasikan alur baru top-up saldo RFID menggunakan Virtual Account Xendit, menggantikan proses verifikasi manual yang sebelumnya dilakukan via IMPAZZ.
+Aplikasi ini mendemonstrasikan alur baru top-up saldo RFID menggunakan Automation Engine yang mencocokkan data Webreport (customer) dengan Rekening Koran (bank), menggantikan proses verifikasi manual di IMPAZZ.
 
 ### Fitur Demo
 
-- **Customer Portal**: Dashboard pelanggan, top-up via VA, riwayat transaksi
-- **Admin Portal**: Dashboard admin, monitoring transaksi real-time
-- **Simulasi Xendit**: Simulasi pembayaran yang langsung update saldo
+- **Customer Portal**: Dashboard, submit laporan top-up, riwayat
+- **Admin Portal**: Bank API simulator, File Import CSV, Matching Engine
+- **Automation Engine**: Matching VA + Nominal dari 2 sumber data
 
 ## Quick Start
 
@@ -29,22 +29,23 @@ Buka [http://localhost:3000](http://localhost:3000) di browser.
 | URL | Deskripsi |
 |-----|-----------|
 | `/customer` | Dashboard pelanggan |
-| `/customer/topup` | Top-up saldo (demo simulasi) |
+| `/customer/topup` | Submit laporan top-up |
 | `/customer/history` | Riwayat transaksi |
 | `/customer/cards` | Daftar kartu RFID |
 | `/admin` | Dashboard admin |
+| `/admin/bank-api` | Simulasi Bank API |
+| `/admin/file-import` | Import CSV rekening koran |
+| `/admin/matching` | Matching Engine |
 | `/admin/transactions` | Semua transaksi |
 | `/admin/customers` | Daftar pelanggan |
 
 ## Cara Demo
 
-1. Buka `/customer/topup`
-2. Masukkan nominal top-up
-3. Klik "Lanjutkan"
-4. Klik "Simulasi Pembayaran Berhasil"
-5. Tunggu 3 detik (simulasi webhook Xendit)
-6. Saldo bertambah otomatis
-7. Buka `/admin` di tab baru untuk lihat transaksi masuk
+1. Buka `/customer/topup`, submit laporan (VA: `8810012345678901`, Nominal: `10000000`)
+2. Buka `/admin/bank-api`, hubungkan ke bank, simulasikan callback dengan VA dan nominal yang sama
+3. Buka `/admin/matching`, klik "Jalankan Matching"
+4. Verifikasi match yang ditemukan
+5. Kembali ke `/customer`, saldo sudah bertambah
 
 ## Dokumentasi
 
@@ -52,6 +53,7 @@ Lihat folder `/docs` untuk dokumen proyek:
 
 - [Problem Statement](./docs/01-problem-statement.md) - Ringkasan masalah dan solusi
 - [Flow Comparison](./docs/02-flow-comparison.md) - Perbandingan alur lama vs baru
+- [Automation Engine](./docs/03-automation-engine.md) - Dokumentasi teknis engine
 
 ## Tech Stack
 

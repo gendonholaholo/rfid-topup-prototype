@@ -6,6 +6,7 @@
 |----|---------|-----------|----------|
 | 1 | [Problem Statement](./01-problem-statement.md) | Ringkasan masalah dan solusi | Stakeholder, Management |
 | 2 | [Flow Comparison](./02-flow-comparison.md) | Perbandingan alur lama vs baru | Stakeholder, Tim Teknis |
+| 3 | [Automation Engine](./03-automation-engine.md) | Dokumentasi teknis engine | Tim Teknis, Developer |
 
 ## Cara Penggunaan
 
