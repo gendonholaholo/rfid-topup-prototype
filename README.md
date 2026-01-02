@@ -1,36 +1,79 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# RFID Top-Up Prototype
 
-## Getting Started
+Prototype aplikasi untuk demonstrasi integrasi Xendit Payment Gateway dengan sistem top-up saldo RFID Pertamina Retail.
 
-First, run the development server:
+## Tentang Proyek
+
+Aplikasi ini mendemonstrasikan alur baru top-up saldo RFID menggunakan Virtual Account Xendit, menggantikan proses verifikasi manual yang sebelumnya dilakukan via IMPAZZ.
+
+### Fitur Demo
+
+- **Customer Portal**: Dashboard pelanggan, top-up via VA, riwayat transaksi
+- **Admin Portal**: Dashboard admin, monitoring transaksi real-time
+- **Simulasi Xendit**: Simulasi pembayaran yang langsung update saldo
+
+## Quick Start
 
 ```bash
+# Install dependencies
+npm install
+
+# Run development server
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Buka [http://localhost:3000](http://localhost:3000) di browser.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Halaman yang Tersedia
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| URL | Deskripsi |
+|-----|-----------|
+| `/customer` | Dashboard pelanggan |
+| `/customer/topup` | Top-up saldo (demo simulasi) |
+| `/customer/history` | Riwayat transaksi |
+| `/customer/cards` | Daftar kartu RFID |
+| `/admin` | Dashboard admin |
+| `/admin/transactions` | Semua transaksi |
+| `/admin/customers` | Daftar pelanggan |
 
-## Learn More
+## Cara Demo
 
-To learn more about Next.js, take a look at the following resources:
+1. Buka `/customer/topup`
+2. Masukkan nominal top-up
+3. Klik "Lanjutkan"
+4. Klik "Simulasi Pembayaran Berhasil"
+5. Tunggu 3 detik (simulasi webhook Xendit)
+6. Saldo bertambah otomatis
+7. Buka `/admin` di tab baru untuk lihat transaksi masuk
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Dokumentasi
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Lihat folder `/docs` untuk dokumen proyek:
 
-## Deploy on Vercel
+- [Problem Statement](./docs/01-problem-statement.md) - Ringkasan masalah dan solusi
+- [Flow Comparison](./docs/02-flow-comparison.md) - Perbandingan alur lama vs baru
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Tech Stack
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Next.js 16 (App Router)
+- TypeScript
+- Tailwind CSS v4
+- shadcn/ui
+- Zustand (state management)
+- Lucide React (icons)
+
+## Catatan
+
+Ini adalah **prototype untuk demonstrasi** dan bukan production-ready application. Untuk implementasi production, diperlukan:
+
+- Integrasi API Xendit yang sebenarnya
+- Backend server untuk handle webhook
+- Database untuk persistence
+- Authentication & authorization
+- Dan lain-lain
+
+## Branding
+
+Menggunakan warna Pertamina:
+- Primary (Red): #E21A22
+- Secondary (Blue): #0D47A1
