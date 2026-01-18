@@ -142,42 +142,30 @@ export default function AdminDashboard() {
         </Card>
 
         {/* Quick Actions */}
-        <div className="grid gap-4 md:grid-cols-3">
+        <div className="grid gap-4 md:grid-cols-2">
           <Card className="hover:shadow-md transition-shadow">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg">
-                <Wifi className="h-5 w-5 text-blue-500" />
-                Bank API
+                <Building2 className="h-5 w-5 text-blue-500" />
+                Integrasi Bank
               </CardTitle>
               <CardDescription>
-                Simulasi integrasi dengan API bank
+                Terima data rekening koran via Webhook atau File Import
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-2">
               <Button asChild variant="outline" className="w-full">
-                <Link href="/admin/bank-api">
-                  Buka Bank API
-                  <ArrowRight className="ml-2 h-4 w-4" />
+                <Link href="/admin/integration-demo">
+                  <Wifi className="mr-2 h-4 w-4 text-green-500" />
+                  Webhook (Real-time)
+                  <ArrowRight className="ml-auto h-4 w-4" />
                 </Link>
               </Button>
-            </CardContent>
-          </Card>
-
-          <Card className="hover:shadow-md transition-shadow">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <Upload className="h-5 w-5 text-purple-500" />
-                File Import
-              </CardTitle>
-              <CardDescription>
-                Import data dari rekening koran CSV
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
               <Button asChild variant="outline" className="w-full">
-                <Link href="/admin/file-import">
-                  Buka File Import
-                  <ArrowRight className="ml-2 h-4 w-4" />
+                <Link href="/admin/integration-demo?tab=file">
+                  <Upload className="mr-2 h-4 w-4 text-purple-500" />
+                  File Import (Batch)
+                  <ArrowRight className="ml-auto h-4 w-4" />
                 </Link>
               </Button>
             </CardContent>
@@ -190,11 +178,11 @@ export default function AdminDashboard() {
                 Matching Engine
               </CardTitle>
               <CardDescription>
-                Cocokkan dan verifikasi data
+                Cocokkan dan verifikasi data webreport dengan bank statement
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <Button asChild className="w-full">
+              <Button asChild className="w-full bg-pertamina-red hover:bg-red-700">
                 <Link href="/admin/matching">
                   Buka Matching
                   <ArrowRight className="ml-2 h-4 w-4" />

@@ -1,7 +1,7 @@
 # Automation Engine Documentation
 
 **Dokumen:** TECH-001
-**Versi:** 1.0
+**Versi:** 2.0
 **Tanggal:** 2 Januari 2026
 
 ---
@@ -41,7 +41,7 @@ Automation Engine adalah sistem yang menggantikan proses verifikasi manual denga
 
 ## 3. Sumber Data Bank Statement
 
-### 3.1 Opsi A: Bank API Integration
+### 3.1 Opsi A: Bank Webhook (Real-time)
 
 **Kelebihan:**
 - Real-time notification
@@ -52,8 +52,9 @@ Automation Engine adalah sistem yang menggantikan proses verifikasi manual denga
 - Setup lebih kompleks
 
 **Simulasi di Prototype:**
-- Halaman `/admin/bank-api`
-- Simulasi callback API dengan form input
+- Halaman `/admin/integration-demo` → Tab "Webhook"
+- Split-screen: Sisi Bank vs Sisi IMPAZZ
+- Simulasi webhook push dengan live activity feed
 
 ### 3.2 Opsi B: File Import (CSV)
 
@@ -64,6 +65,10 @@ Automation Engine adalah sistem yang menggantikan proses verifikasi manual denga
 **Kekurangan:**
 - Semi-manual (perlu admin upload)
 - Ada delay antara transaksi dan import
+
+**Simulasi di Prototype:**
+- Halaman `/admin/integration-demo` → Tab "File Import"
+- Upload CSV, preview data, import ke sistem
 
 **Format CSV:**
 
@@ -164,22 +169,6 @@ virtual_account,amount,date,sender_name,reference
 }
 ```
 
-**POST (File Import Mode) Request Body:**
-```json
-{
-  "bankCode": "BCA",
-  "accountNumber": "1234567890",
-  "statements": [
-    {
-      "virtualAccountNumber": "8810012345678901",
-      "amount": 10000000,
-      "transactionDate": "2026-01-02T09:00:00.000Z",
-      "senderName": "PT ABC Indonesia"
-    }
-  ]
-}
-```
-
 ### 5.3 Matching API
 
 | Method | Endpoint | Fungsi |
@@ -203,32 +192,40 @@ virtual_account,amount,date,sender_name,reference
 
 ## 6. Cara Demo
 
-### 6.1 Flow Lengkap
+### 6.1 Halaman yang Tersedia
+
+| URL | Fungsi |
+|-----|--------|
+| `/customer/topup` | Customer submit laporan top-up |
+| `/admin/integration-demo` | Demo integrasi (Webhook & File Import) |
+| `/admin/matching` | Jalankan matching & verifikasi |
+| `/customer` | Lihat saldo terupdate |
+
+### 6.2 Demo Skenario A: Webhook (Real-time)
 
 | Step | Halaman | Aksi |
 |------|---------|------|
-| 1 | `/customer/topup` | Customer submit laporan top-up |
-| 2a | `/admin/bank-api` | Admin simulasi callback bank API |
-| 2b | `/admin/file-import` | Atau admin upload CSV rekening koran |
-| 3 | `/admin/matching` | Admin klik "Jalankan Matching" |
-| 4 | `/admin/matching` | Admin verifikasi match yang ditemukan |
-| 5 | `/customer` | Saldo customer bertambah |
+| 1 | `/customer/topup` | Submit laporan: VA `8810012345678901`, Nominal `10000000` |
+| 2 | `/admin/integration-demo` | Pilih tab "Webhook" |
+| 3 | Panel Sisi Bank | Isi VA dan Nominal yang sama |
+| 4 | Panel Sisi Bank | Klik "Push ke IMPAZZ" |
+| 5 | Panel Sisi IMPAZZ | Lihat live activity feed |
+| 6 | `/admin/matching` | Klik "Jalankan Matching" |
+| 7 | `/admin/matching` | Verifikasi match yang ditemukan |
+| 8 | `/customer` | Saldo sudah bertambah |
 
-### 6.2 Quick Demo
+### 6.3 Demo Skenario B: File Import (Batch)
 
-1. Buka `/customer/topup`
-2. Isi: VA = `8810012345678901`, Nominal = `10000000`
-3. Submit
-
-4. Buka tab baru `/admin/bank-api`
-5. Hubungkan ke bank
-6. Isi VA dan nominal yang sama, klik "Kirim Callback"
-
-7. Buka `/admin/matching`
-8. Klik "Jalankan Matching"
-9. Verifikasi match yang ditemukan
-
-10. Kembali ke `/customer`, saldo sudah bertambah
+| Step | Halaman | Aksi |
+|------|---------|------|
+| 1 | `/customer/topup` | Submit laporan top-up |
+| 2 | `/admin/integration-demo` | Pilih tab "File Import" |
+| 3 | Tab File Import | Download template CSV |
+| 4 | Tab File Import | Isi CSV dengan data yang sesuai |
+| 5 | Tab File Import | Upload dan import CSV |
+| 6 | `/admin/matching` | Klik "Jalankan Matching" |
+| 7 | `/admin/matching` | Verifikasi match |
+| 8 | `/customer` | Saldo sudah bertambah |
 
 ---
 

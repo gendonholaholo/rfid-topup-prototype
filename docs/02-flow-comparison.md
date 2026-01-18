@@ -5,7 +5,7 @@
 | | |
 |---|---|
 | **Dokumen** | FLOW-001 |
-| **Versi** | 1.0 |
+| **Versi** | 2.0 |
 | **Tanggal** | 2 Januari 2026 |
 
 ---
@@ -14,10 +14,10 @@
 
 | Aspek | Sistem Lama | Sistem Baru |
 |-------|-------------|-------------|
-| Metode Pembayaran | Transfer Bank + Upload Bukti | Transfer ke Virtual Account |
-| Verifikasi | Manual oleh Admin | Otomatis via Webhook |
-| Waktu Proses | 1-24 jam | Real-time (< 1 menit) |
-| Portal yang Digunakan | Webreport + IMPAZZ | IMPAZZ (webhook receiver) |
+| Metode Pembayaran | Transfer Bank + Upload Bukti | Transfer ke VA + Laporan di Webreport |
+| Verifikasi | Manual oleh Admin | Semi-otomatis dengan Automation Engine |
+| Waktu Proses | 1-24 jam | < 5 menit (setelah matching) |
+| Input Data Bank | Cek mutasi manual | Webhook API atau File Import |
 
 ---
 
@@ -56,82 +56,85 @@
 
 ## 3. Alur Sistem Baru (Future State)
 
-### 3.1 Langkah-Langkah Proses
+### 3.1 Skenario A: Bank Webhook (Real-time)
 
 | Step | Aktor | Aksi | Estimasi Waktu |
 |------|-------|------|----------------|
-| 1 | Pelanggan | Transfer ke Virtual Account via mobile/internet banking | 5 menit |
-| 2 | Xendit | Mendeteksi pembayaran masuk secara otomatis | Instant |
-| 3 | Xendit | Mengirim webhook notification ke IMPAZZ | < 10 detik |
-| 4 | IMPAZZ | Memproses webhook, validasi data pembayaran | < 5 detik |
-| 5 | IMPAZZ | Update saldo kartu RFID secara otomatis | Instant |
-| 6 | Pelanggan | Saldo bertambah, kartu RFID bisa digunakan | - |
+| 1 | Pelanggan | Transfer ke VA via mobile/internet banking | 5 menit |
+| 2 | Pelanggan | Submit laporan di Webreport (VA + Nominal) | 2 menit |
+| 3 | Bank | Kirim webhook ke IMPAZZ (otomatis) | < 1 menit |
+| 4 | IMPAZZ | Matching Engine mencocokkan data | < 10 detik |
+| 5 | Admin | Verifikasi match (1 klik) | 1 menit |
+| 6 | Sistem | Update saldo kartu RFID | Instant |
 
-### 3.2 Waktu Total Proses
+**Total waktu:** < 10 menit
 
-| Skenario | Waktu |
-|----------|-------|
-| Total | Kurang dari 1 menit |
+### 3.2 Skenario B: File Import (Batch)
+
+| Step | Aktor | Aksi | Estimasi Waktu |
+|------|-------|------|----------------|
+| 1 | Pelanggan | Transfer ke VA via mobile/internet banking | 5 menit |
+| 2 | Pelanggan | Submit laporan di Webreport (VA + Nominal) | 2 menit |
+| 3 | Admin | Export rekening koran dari internet banking | 2 menit |
+| 4 | Admin | Upload CSV ke IMPAZZ | 1 menit |
+| 5 | IMPAZZ | Matching Engine mencocokkan data | < 10 detik |
+| 6 | Admin | Verifikasi match (1 klik) | 1 menit |
+| 7 | Sistem | Update saldo kartu RFID | Instant |
+
+**Total waktu:** < 15 menit (tergantung jadwal import)
 
 ### 3.3 Keunggulan Sistem Baru
 
 | No | Keunggulan |
 |----|------------|
-| 1 | Tidak perlu upload bukti transfer |
-| 2 | Tidak perlu verifikasi manual oleh admin |
-| 3 | Real-time processing |
-| 4 | Audit trail otomatis tersimpan di sistem |
-| 5 | Tidak ada risiko human error |
+| 1 | Tidak perlu upload bukti transfer (gambar) |
+| 2 | Matching otomatis berdasarkan VA + Nominal |
+| 3 | Admin hanya perlu verifikasi 1 klik |
+| 4 | Audit trail otomatis tersimpan |
+| 5 | Scoring system untuk deteksi anomali |
 
 ---
 
-## 4. Perbandingan Virtual Account
+## 4. Perbandingan Sumber Data Bank
 
-### 4.1 Opsi A: VA Langsung dari Bank
-
-**Alur:**
-Pelanggan → Bank → ??? → IMPAZZ
-
-**Masalah:**
-
-| No | Masalah |
-|----|---------|
-| 1 | Setiap bank memiliki sistem notifikasi yang berbeda |
-| 2 | Perlu integrasi terpisah ke masing-masing bank |
-| 3 | Maintenance menjadi kompleks |
-| 4 | Tidak ada standarisasi format data |
-
-### 4.2 Opsi B: VA Melalui Xendit (Rekomendasi)
+### 4.1 Opsi A: Bank Webhook (Partnership)
 
 **Alur:**
-Pelanggan → Bank → Xendit → IMPAZZ
+```
+Pelanggan → Bank → Webhook → IMPAZZ → Matching
+```
 
-**Keuntungan:**
+| Kelebihan | Kekurangan |
+|-----------|------------|
+| Real-time | Perlu partnership dengan bank |
+| Fully automated | Setup lebih kompleks |
+| Minimal intervensi admin | Biaya integrasi |
 
-| No | Keuntungan |
-|----|------------|
-| 1 | Xendit menangani semua bank |
-| 2 | Cukup 1 integrasi untuk semua bank |
-| 3 | Format webhook standar dan konsisten |
-| 4 | Dashboard monitoring tersedia |
-| 5 | Support dan dokumentasi lengkap |
+### 4.2 Opsi B: File Import CSV
 
-### 4.3 Bank yang Didukung Xendit
+**Alur:**
+```
+Pelanggan → Bank → Export CSV → Admin Upload → IMPAZZ → Matching
+```
 
-| Bank | Kode Bank | Format VA |
-|------|-----------|-----------|
-| BCA | BCA | 10 digit + prefix |
-| Mandiri | MANDIRI | 13 digit |
-| BNI | BNI | 12 digit |
-| BRI | BRI | 15 digit |
-| Permata | PERMATA | 16 digit |
-| CIMB Niaga | CIMB | 14 digit |
+| Kelebihan | Kekurangan |
+|-----------|------------|
+| Tidak perlu integrasi bank | Semi-manual |
+| Bisa langsung digunakan | Ada delay |
+| Biaya rendah | Perlu jadwal import rutin |
+
+### 4.3 Rekomendasi Implementasi
+
+| Fase | Pendekatan | Alasan |
+|------|------------|--------|
+| Fase 1 | File Import | Quick win, bisa langsung digunakan |
+| Fase 2 | Bank Webhook | Upgrade jika ada partnership bank |
 
 ---
 
 ## 5. Contoh Skenario
 
-### 5.1 Skenario: PT ABC Indonesia Top-Up Rp 10.000.000
+### 5.1 PT ABC Indonesia Top-Up Rp 10.000.000
 
 **Dengan Sistem Lama:**
 
@@ -146,42 +149,44 @@ Pelanggan → Bank → Xendit → IMPAZZ
 | 10:35 | Saldo RFID bertambah |
 | **Total** | **1 jam 35 menit** |
 
-**Dengan Sistem Baru:**
+**Dengan Sistem Baru (Skenario Webhook):**
 
 | Waktu | Aktivitas |
 |-------|-----------|
-| 09:00 | PT ABC transfer Rp 10.000.000 ke VA 1234567890123456 |
-| 09:00 | Xendit mendeteksi pembayaran |
-| 09:00 | Xendit mengirim webhook ke IMPAZZ |
-| 09:00 | IMPAZZ memproses dan update saldo otomatis |
-| 09:00 | Saldo RFID bertambah |
-| **Total** | **Kurang dari 1 menit** |
+| 09:00 | PT ABC transfer Rp 10.000.000 ke VA |
+| 09:02 | Staff submit laporan di Webreport |
+| 09:02 | Bank mengirim webhook ke IMPAZZ |
+| 09:02 | Matching Engine menemukan match (Score: 99.75) |
+| 09:05 | Admin verifikasi dengan 1 klik |
+| 09:05 | Saldo RFID bertambah |
+| **Total** | **5 menit** |
 
 ---
 
-## 6. Spesifikasi Teknis Webhook
+## 6. Automation Engine: Cara Kerja
 
-### 6.1 Request dari Xendit ke IMPAZZ
+### 6.1 Input Data
 
-Xendit akan mengirimkan HTTP POST request ke endpoint IMPAZZ dengan payload berikut:
+| Sumber | Data yang Dikirim |
+|--------|-------------------|
+| Webreport (Customer) | VA, Nominal, Tanggal, Bank |
+| Rekening Koran (Bank) | VA, Nominal, Tanggal, Pengirim |
 
-| Field | Tipe | Contoh | Keterangan |
-|-------|------|--------|------------|
-| id | string | "579c8d61f23fa4ca35e52da4" | ID unik dari Xendit |
-| external_id | string | "VA-001-PTABC" | ID referensi dari merchant |
-| bank_code | string | "BCA" | Kode bank yang digunakan |
-| name | string | "PT ABC Indonesia" | Nama pemilik VA |
-| account_number | string | "1234567890123456" | Nomor Virtual Account |
-| balance | number | 10000000 | Nominal yang dibayarkan |
-| payment_id | string | "1502450097080" | ID pembayaran |
-| transaction_timestamp | string | "2026-01-02T09:00:00.000Z" | Waktu transaksi (ISO 8601) |
+### 6.2 Algoritma Matching
 
-### 6.2 Expected Response dari IMPAZZ
+| Kriteria | Bobot | Keterangan |
+|----------|-------|------------|
+| VA Match | 50% | Virtual Account harus sama |
+| Amount Match | 40% | Nominal harus sama |
+| Date Proximity | 10% | Semakin dekat tanggal, skor lebih tinggi |
 
-| Field | Tipe | Contoh |
-|-------|------|--------|
-| status | string | "success" |
-| message | string | "Payment processed" |
+### 6.3 Hasil Matching
+
+| Score | Status | Tindakan |
+|-------|--------|----------|
+| 90-100 | Auto Match | Langsung masuk queue verifikasi |
+| 50-89 | Manual Review | Admin perlu review detail |
+| 0-49 | No Match | Tidak dicocokkan |
 
 ---
 
@@ -195,72 +200,37 @@ Xendit akan mengirimkan HTTP POST request ke endpoint IMPAZZ dengan payload beri
 | Riwayat transaksi | **Tetap aktif** |
 | Manajemen kartu RFID | **Tetap aktif** |
 | Laporan penggunaan | **Tetap aktif** |
-| Upload bukti transfer | **Tidak diperlukan lagi** |
-
-### 7.2 Alur Top-Up Baru untuk Pelanggan
-
-| Step | Aktivitas |
-|------|-----------|
-| 1 | Pelanggan login ke Webreport |
-| 2 | Pelanggan melihat nomor Virtual Account (Fixed VA) |
-| 3 | Pelanggan transfer ke VA tersebut dari bank manapun |
-| 4 | Saldo otomatis bertambah (refresh halaman untuk melihat update) |
+| Submit laporan top-up | **Tetap aktif** (tanpa upload gambar) |
 
 ---
 
-## 8. Diagram Arsitektur
+## 8. Diagram Visual
 
-### 8.1 Komponen Sistem
+### 8.1 Alur Sistem Baru
 
-| Komponen | Fungsi | Catatan |
-|----------|--------|---------|
-| **Webreport** | Portal pelanggan untuk view VA dan saldo | Tetap digunakan |
-| **Mobile Banking** | Aplikasi bank untuk transfer ke VA | Milik pelanggan |
-| **Xendit** | Payment gateway, menerima pembayaran dan kirim webhook | Baru |
-| **IMPAZZ** | Backend system, terima webhook dan update saldo | Perlu modifikasi |
-| **Database RFID** | Penyimpanan data saldo kartu | Existing |
-
-### 8.2 Alur Data
-
-| Dari | Ke | Data yang Dikirim |
-|------|-----|-------------------|
-| Pelanggan | Mobile Banking | Instruksi transfer ke VA |
-| Mobile Banking | Bank | Request transfer |
-| Bank | Xendit | Notifikasi pembayaran masuk |
-| Xendit | IMPAZZ | Webhook dengan detail pembayaran |
-| IMPAZZ | Database RFID | Update saldo kartu |
-| Webreport | Database RFID | Query saldo terbaru |
+```
+┌─────────────┐     ┌─────────────┐     ┌─────────────┐     ┌─────────────┐
+│  CUSTOMER   │     │    BANK     │     │   IMPAZZ    │     │   OUTPUT    │
+├─────────────┤     ├─────────────┤     ├─────────────┤     ├─────────────┤
+│ 1. Transfer │────►│ 2. Process  │────►│ 3. Receive  │     │             │
+│    ke VA    │     │    Payment  │     │    Data     │     │             │
+│             │     │             │     │             │     │             │
+│ 4. Submit   │────────────────────────►│ 5. Matching │────►│ 6. Saldo    │
+│    Laporan  │     │             │     │    Engine   │     │    Update   │
+└─────────────┘     └─────────────┘     └─────────────┘     └─────────────┘
+```
 
 ---
 
-## 9. Timeline Implementasi (High-Level)
+## 9. Lampiran
 
-| Fase | Aktivitas | Dependensi |
-|------|-----------|------------|
-| 1 | Setup akun Xendit Sandbox | - |
-| 2 | Develop webhook receiver di IMPAZZ | Akses ke source code IMPAZZ |
-| 3 | Testing end-to-end di Sandbox | Fase 1 dan 2 selesai |
-| 4 | Setup akun Xendit Production | Approval dari management |
-| 5 | UAT dengan pilot customer | Fase 3 dan 4 selesai |
-| 6 | Rollout ke semua customer | Fase 5 selesai |
-
----
-
-## 10. Lampiran
-
-### 10.1 Dokumen Terkait
+### 9.1 Dokumen Terkait
 
 | Dokumen | Keterangan |
 |---------|------------|
 | 01-problem-statement.md | Problem Statement dan Solution Overview |
+| 03-automation-engine.md | Dokumentasi Teknis Automation Engine |
 | README.md | Dokumentasi Prototype Application |
-
-### 10.2 Referensi
-
-| Referensi | Link |
-|-----------|------|
-| Dokumentasi Xendit VA | https://developers.xendit.co/api-reference/#virtual-accounts |
-| Xendit Dashboard | https://dashboard.xendit.co |
 
 ---
 

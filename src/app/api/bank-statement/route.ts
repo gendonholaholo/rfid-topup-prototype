@@ -62,7 +62,7 @@ export async function POST(request: NextRequest) {
     } else {
       return handleAPIPayload(body as BankStatementAPIPayload);
     }
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { success: false, error: 'Invalid request body' },
       { status: 400 }

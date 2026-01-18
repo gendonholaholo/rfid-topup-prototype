@@ -1,3 +1,7 @@
+// Re-export analytics and integration types
+export * from './analytics';
+export * from './integrations';
+
 // ===========================================
 // CORE ENTITIES
 // ===========================================
@@ -112,6 +116,7 @@ export interface Transaction {
   status: 'pending' | 'success' | 'failed' | 'rejected';
   paymentMethod: string;
   bankCode: string;
+  sourcePlan?: 'A' | 'B' | 'C';  // Track which plan was used
   matchingResultId?: string;
   webreportId?: string;
   bankStatementId?: string;

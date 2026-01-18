@@ -2,7 +2,7 @@
 ## Problem Statement & Solution Overview
 
 **Dokumen:** PRD-001
-**Versi:** 1.0
+**Versi:** 2.0
 **Tanggal:** 2 Januari 2026
 **Status:** Draft untuk Review Client
 
@@ -10,7 +10,7 @@
 
 ## 1. Executive Summary
 
-Dokumen ini merangkum permasalahan pada sistem top-up saldo RFID untuk pembelian BBK (BBM Non-Subsidi) di Pertamina Retail, serta solusi yang diusulkan menggunakan Payment Gateway Xendit.
+Dokumen ini merangkum permasalahan pada sistem top-up saldo RFID untuk pembelian BBK (BBM Non-Subsidi) di Pertamina Retail, serta solusi yang diusulkan menggunakan **Automation Engine** untuk verifikasi otomatis.
 
 ---
 
@@ -63,17 +63,24 @@ Pelanggan Transfer --> Upload Bukti di Webreport --> Admin Verifikasi di IMPAZZ 
 
 ## 4. Solusi yang Diusulkan
 
-### 4.1 Integrasi Payment Gateway (Xendit)
+### 4.1 Automation Engine
 
-Mengimplementasikan Virtual Account melalui Xendit untuk menggantikan proses verifikasi manual.
+Mengimplementasikan **Automation Engine** yang mencocokkan data dari dua sumber:
+1. **Webreport** - Laporan top-up dari customer (VA + Nominal)
+2. **Rekening Koran Bank** - Data transaksi dari bank (VA + Nominal)
+
+Engine akan otomatis mencocokkan kedua data berdasarkan:
+- Virtual Account Number
+- Nominal Transfer
+- Kedekatan Waktu Transaksi
 
 ### 4.2 Keunggulan Solusi
 
 | Aspek | Sebelum | Sesudah |
 |-------|---------|---------|
-| **Waktu Proses** | 1-24 jam | Real-time (< 1 menit) |
-| **Verifikasi** | Manual oleh admin | Otomatis oleh sistem |
-| **Akurasi** | Rentan human error | 100% akurat |
+| **Waktu Proses** | 1-24 jam | < 5 menit (setelah data bank masuk) |
+| **Verifikasi** | Manual oleh admin | Semi-otomatis dengan matching engine |
+| **Akurasi** | Rentan human error | Scoring algorithm 90%+ akurat |
 | **Audit Trail** | Manual | Otomatis tercatat |
 
 ### 4.3 Komponen yang Berubah
@@ -81,36 +88,33 @@ Mengimplementasikan Virtual Account melalui Xendit untuk menggantikan proses ver
 | Komponen | Status | Keterangan |
 |----------|--------|------------|
 | Kartu RFID | Tetap | Tidak ada perubahan |
-| Webreport | Tetap | Fungsi lain tetap berjalan, hanya flow top-up berubah |
-| IMPAZZ | Modifikasi | Menerima webhook dari Xendit, verifikasi otomatis |
-| Xendit | Baru | Payment gateway untuk Virtual Account |
+| Webreport | Tetap | Fungsi lain tetap berjalan |
+| IMPAZZ | Modifikasi | Ditambah Automation Engine |
+| Bank Integration | Baru | Webhook API atau File Import |
 
 ---
 
-## 5. Jenis Virtual Account
+## 5. Sumber Data Rekening Koran
 
-### 5.1 Rekomendasi: Fixed Virtual Account
+### 5.1 Opsi A: Bank Webhook (Real-time)
 
-Setiap pelanggan mendapat nomor VA tetap yang bisa digunakan berulang kali.
+Bank mengirim notifikasi otomatis ke IMPAZZ setiap ada transaksi masuk.
 
-**Contoh:**
-```
-PT ABC Indonesia --> VA: 1234567890123456
-PT XYZ Logistics --> VA: 1234567890123457
-```
+| Kelebihan | Kekurangan |
+|-----------|------------|
+| Real-time | Perlu partnership dengan bank |
+| Fully automated | Setup lebih kompleks |
 
-**Keuntungan:**
-- Pelanggan cukup simpan 1 nomor VA
-- Proses top-up lebih cepat (tidak perlu generate VA baru)
-- Mudah diintegrasikan dengan sistem ERP pelanggan
+### 5.2 Opsi B: File Import (Batch)
 
-### 5.2 Alternatif: Single-Use Virtual Account
+Admin mengexport rekening koran dari internet banking dan upload ke IMPAZZ.
 
-VA baru di-generate setiap kali ada permintaan top-up.
+| Kelebihan | Kekurangan |
+|-----------|------------|
+| Tidak perlu integrasi bank | Semi-manual |
+| Bisa langsung digunakan | Ada delay |
 
-**Kapan digunakan:**
-- Jika ada kebutuhan 1 VA = 1 transaksi
-- Untuk nominal yang harus exact match
+**Rekomendasi:** Mulai dengan **File Import**, kemudian upgrade ke **Webhook** jika ada partnership bank.
 
 ---
 
@@ -119,14 +123,14 @@ VA baru di-generate setiap kali ada permintaan top-up.
 ### 6.1 Dalam Scope
 
 - Prototype demonstrasi flow baru
-- Dokumentasi teknis integrasi
+- Dokumentasi teknis Automation Engine
 - Spesifikasi API untuk IMPAZZ
 
 ### 6.2 Di Luar Scope (Perlu Akses Lebih Lanjut)
 
 - Modifikasi langsung ke IMPAZZ
 - Modifikasi langsung ke Webreport
-- Setup akun production Xendit
+- Integrasi API bank production
 
 ---
 
@@ -134,15 +138,15 @@ VA baru di-generate setiap kali ada permintaan top-up.
 
 ### 7.1 Asumsi
 
-1. IMPAZZ memiliki atau dapat dikembangkan endpoint untuk menerima webhook
+1. IMPAZZ memiliki atau dapat dikembangkan endpoint untuk menerima data
 2. Pelanggan akan diberikan edukasi mengenai flow baru
-3. Xendit dipilih sebagai payment gateway
+3. Bank statement tersedia dalam format yang dapat diproses (CSV)
 
 ### 7.2 Dependensi
 
 1. Akses ke dokumentasi API IMPAZZ
-2. Kredensial Xendit (sandbox untuk testing, production untuk live)
-3. Keputusan management terkait Fixed VA vs Single-Use VA
+2. Format export rekening koran dari bank
+3. Keputusan management terkait integrasi bank
 
 ---
 
@@ -150,15 +154,16 @@ VA baru di-generate setiap kali ada permintaan top-up.
 
 | No | Keputusan | Tanggal |
 |----|-----------|---------|
-| 1 | Menggunakan Fixed Virtual Account | 2 Jan 2026 |
-| 2 | Webreport tetap digunakan (fungsi lain tetap berjalan) | 2 Jan 2026 |
-| 3 | Fokus prototype pada flow Xendit --> IMPAZZ | 2 Jan 2026 |
+| 1 | Menggunakan Automation Engine (bukan Xendit) | 2 Jan 2026 |
+| 2 | Support 2 mode: Webhook + File Import | 2 Jan 2026 |
+| 3 | Webreport tetap digunakan | 2 Jan 2026 |
 
 ---
 
 ## 9. Lampiran
 
 - Dokumen Flow Comparison (02-flow-comparison.md)
+- Dokumentasi Automation Engine (03-automation-engine.md)
 - Prototype Application (README.md)
 
 ---

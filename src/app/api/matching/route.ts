@@ -63,7 +63,7 @@ export async function POST(request: NextRequest) {
       success: true,
       data: newResult,
     }, { status: 201 });
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { success: false, error: 'Invalid request body' },
       { status: 400 }
@@ -118,7 +118,7 @@ export async function PATCH(request: NextRequest) {
       success: true,
       data: updatedResult,
     });
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { success: false, error: 'Invalid request body' },
       { status: 400 }

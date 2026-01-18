@@ -3,27 +3,41 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
+import {
+  LayoutDashboard,
+  CreditCard,
+  Wallet,
+  History,
+  Home,
+  BarChart3,
+  Plug,
+  GitCompare,
+  Receipt,
+  Users,
+} from 'lucide-react';
+import { LucideIcon } from 'lucide-react';
 
 interface NavItem {
   href: string;
   label: string;
-  icon: string;
+  icon: LucideIcon;
+  badge?: string;
 }
 
 const customerNavItems: NavItem[] = [
-  { href: '/customer', label: 'Dashboard', icon: 'D' },
-  { href: '/customer/topup', label: 'Top-Up Saldo', icon: 'T' },
-  { href: '/customer/cards', label: 'Kartu RFID', icon: 'K' },
-  { href: '/customer/history', label: 'Riwayat', icon: 'R' },
+  { href: '/customer', label: 'Dashboard', icon: LayoutDashboard },
+  { href: '/customer/topup', label: 'Top-Up Saldo', icon: Wallet },
+  { href: '/customer/cards', label: 'Kartu RFID', icon: CreditCard },
+  { href: '/customer/history', label: 'Riwayat', icon: History },
 ];
 
 const adminNavItems: NavItem[] = [
-  { href: '/admin', label: 'Dashboard', icon: 'D' },
-  { href: '/admin/bank-api', label: 'Bank API', icon: 'A' },
-  { href: '/admin/file-import', label: 'File Import', icon: 'F' },
-  { href: '/admin/matching', label: 'Matching', icon: 'M' },
-  { href: '/admin/transactions', label: 'Transaksi', icon: 'T' },
-  { href: '/admin/customers', label: 'Pelanggan', icon: 'P' },
+  { href: '/admin', label: 'Dashboard', icon: Home },
+  { href: '/admin/dashboard', label: 'Analytics', icon: BarChart3, badge: 'NEW' },
+  { href: '/admin/integration', label: 'Integration Hub', icon: Plug, badge: 'NEW' },
+  { href: '/admin/matching', label: 'Matching Engine', icon: GitCompare },
+  { href: '/admin/transactions', label: 'Transaksi', icon: Receipt },
+  { href: '/admin/customers', label: 'Pelanggan', icon: Users },
 ];
 
 interface SidebarProps {
@@ -38,7 +52,8 @@ export function Sidebar({ userType }: SidebarProps) {
     <aside className="fixed left-0 top-16 z-40 h-[calc(100vh-4rem)] w-64 border-r bg-white">
       <nav className="flex flex-col gap-1 p-4">
         {navItems.map((item) => {
-          const isActive = pathname === item.href;
+          const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
+          const Icon = item.icon;
           return (
             <Link
               key={item.href}
@@ -51,12 +66,20 @@ export function Sidebar({ userType }: SidebarProps) {
               )}
             >
               <span className={cn(
-                'flex h-8 w-8 items-center justify-center rounded-md text-sm font-bold',
+                'flex h-8 w-8 items-center justify-center rounded-md',
                 isActive ? 'bg-white/20' : 'bg-gray-100'
               )}>
-                {item.icon}
+                <Icon className="h-4 w-4" />
               </span>
-              {item.label}
+              <span className="flex-1">{item.label}</span>
+              {item.badge && (
+                <span className={cn(
+                  'text-[10px] font-bold px-1.5 py-0.5 rounded',
+                  isActive ? 'bg-white/20 text-white' : 'bg-green-100 text-green-700'
+                )}>
+                  {item.badge}
+                </span>
+              )}
             </Link>
           );
         })}

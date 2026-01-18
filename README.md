@@ -33,19 +33,28 @@ Buka [http://localhost:3000](http://localhost:3000) di browser.
 | `/customer/history` | Riwayat transaksi |
 | `/customer/cards` | Daftar kartu RFID |
 | `/admin` | Dashboard admin |
-| `/admin/bank-api` | Simulasi Bank API |
-| `/admin/file-import` | Import CSV rekening koran |
+| `/admin/integration-demo` | Demo integrasi bank (Webhook & File Import) |
 | `/admin/matching` | Matching Engine |
 | `/admin/transactions` | Semua transaksi |
 | `/admin/customers` | Daftar pelanggan |
 
 ## Cara Demo
 
+### Skenario A: Webhook (Real-time)
 1. Buka `/customer/topup`, submit laporan (VA: `8810012345678901`, Nominal: `10000000`)
-2. Buka `/admin/bank-api`, hubungkan ke bank, simulasikan callback dengan VA dan nominal yang sama
-3. Buka `/admin/matching`, klik "Jalankan Matching"
-4. Verifikasi match yang ditemukan
-5. Kembali ke `/customer`, saldo sudah bertambah
+2. Buka `/admin/integration-demo`, pilih tab "Webhook"
+3. Di panel "Sisi Bank", isi VA dan Nominal yang sama, klik "Push ke IMPAZZ"
+4. Lihat activity feed di panel "Sisi IMPAZZ"
+5. Buka `/admin/matching`, klik "Jalankan Matching"
+6. Verifikasi match yang ditemukan
+7. Kembali ke `/customer`, saldo sudah bertambah
+
+### Skenario B: File Import (Batch)
+1. Buka `/customer/topup`, submit laporan top-up
+2. Buka `/admin/integration-demo`, pilih tab "File Import"
+3. Download template CSV, isi data, upload kembali
+4. Buka `/admin/matching`, jalankan matching
+5. Verifikasi dan saldo customer bertambah
 
 ## Dokumentasi
 
@@ -68,11 +77,10 @@ Lihat folder `/docs` untuk dokumen proyek:
 
 Ini adalah **prototype untuk demonstrasi** dan bukan production-ready application. Untuk implementasi production, diperlukan:
 
-- Integrasi API Xendit yang sebenarnya
+- Integrasi API Bank untuk webhook real-time
 - Backend server untuk handle webhook
 - Database untuk persistence
 - Authentication & authorization
-- Dan lain-lain
 
 ## Branding
 
