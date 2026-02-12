@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -22,9 +22,6 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
   Area,
   AreaChart,
 } from 'recharts';
@@ -35,10 +32,9 @@ import {
   CreditCard,
   DollarSign,
   Activity,
-  Building2,
-  FileSpreadsheet,
   ArrowUpRight,
   Calendar,
+  Target,
   LucideIcon,
 } from 'lucide-react';
 import { useStore } from '@/store/useStore';
@@ -46,26 +42,13 @@ import { formatCurrency } from '@/data/mock-data';
 import {
   calculateDashboardAnalytics,
   generateMockMonthlyTrend,
+  generateMockYearlyTrend,
   formatChartAmount,
 } from '@/lib/engine/analytics-engine';
 import { getRankBadgeStyle } from '@/lib/utils/style-helpers';
-import { PlanUsageStats, CustomerAnalytics } from '@/types/analytics';
-
-// ===========================================
-// CONSTANTS
-// ===========================================
-
-const PLAN_COLORS = {
-  planA: '#3B82F6',
-  planB: '#8B5CF6',
-  planC: '#10B981',
-};
+import { CustomerAnalytics, RegionSummary } from '@/types/analytics';
 
 type PeriodType = 'monthly' | 'yearly';
-
-// ===========================================
-// MAIN COMPONENT
-// ===========================================
 
 export default function DashboardAnalyticsPage(): React.ReactElement {
   const transactions = useStore((state) => state.transactions);
@@ -78,12 +61,7 @@ export default function DashboardAnalyticsPage(): React.ReactElement {
   );
 
   const monthlyChartData = useMemo(() => generateMockMonthlyTrend(12), []);
-
-  const planUsageData = [
-    { name: 'Plan A', value: analytics.planUsage.planA.percentage, color: PLAN_COLORS.planA },
-    { name: 'Plan B', value: analytics.planUsage.planB.percentage, color: PLAN_COLORS.planB },
-    { name: 'Plan C', value: analytics.planUsage.planC.percentage, color: PLAN_COLORS.planC },
-  ];
+  const yearlyChartData = useMemo(() => generateMockYearlyTrend(3), []);
 
   return (
     <MainLayout userType="admin">
@@ -102,49 +80,65 @@ export default function DashboardAnalyticsPage(): React.ReactElement {
           activeCustomers={analytics.summary.activeCustomers}
         />
 
-        <div className="grid gap-6 lg:grid-cols-3">
-          <MonthlyTrendChart
-            data={monthlyChartData}
-            selectedPeriod={selectedPeriod}
-            onPeriodChange={setSelectedPeriod}
-          />
-          <PlanUsageChart data={planUsageData} planUsage={analytics.planUsage} />
-        </div>
+        {/* Xendit Summary Card */}
+        <Card className="border-blue-200 bg-blue-50/50 dark:bg-blue-950/20">
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
+                <CreditCard className="h-5 w-5 text-blue-600" />
+              </div>
+              <div>
+                <p className="font-semibold">Xendit Payment Gateway</p>
+                <p className="text-sm text-muted-foreground">Semua transaksi diproses via Xendit</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <span className="text-sm text-muted-foreground">Total Amount</span>
+                <p className="font-medium">{formatCurrency(analytics.xenditUsage.xendit.amount)}</p>
+              </div>
+              <div>
+                <span className="text-sm text-muted-foreground">Transaksi</span>
+                <p className="font-medium">{analytics.xenditUsage.xendit.count}</p>
+              </div>
+              <div>
+                <span className="text-sm text-muted-foreground">Coverage</span>
+                <p className="font-medium">{analytics.xenditUsage.xendit.percentage}%</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
-        <TransactionCountChart data={monthlyChartData} />
+        <RegionSummaryTable regions={analytics.regionSummary} />
+
+        <TrendChart
+          data={selectedPeriod === 'monthly' ? monthlyChartData : yearlyChartData}
+          selectedPeriod={selectedPeriod}
+          onPeriodChange={setSelectedPeriod}
+        />
+
+        <TransactionCountChart
+          data={selectedPeriod === 'monthly' ? monthlyChartData : yearlyChartData}
+          selectedPeriod={selectedPeriod}
+        />
 
         <TopCustomersTable customers={analytics.topCustomers} />
-
-        <PlanSummaryCards planUsage={analytics.planUsage} />
       </div>
     </MainLayout>
   );
 }
 
-// ===========================================
-// SUB-COMPONENTS
-// ===========================================
-
 function DashboardHeader(): React.ReactElement {
   return (
     <div className="flex items-center justify-between">
-      <div>
-        <h1 className="text-2xl font-bold">Dashboard Analytics</h1>
-        <p className="text-muted-foreground">
-          Monitoring summary top-up RFID per bulan dan per tahun
-        </p>
-      </div>
+      <h1 className="text-2xl font-bold">Dashboard Analytics</h1>
       <Button variant="outline" size="sm">
         <Calendar className="mr-2 h-4 w-4" />
-        Januari 2026
+        Februari 2026
       </Button>
     </div>
   );
 }
-
-// ===========================================
-// SUMMARY CARDS
-// ===========================================
 
 interface SummaryCardsProps {
   totalThisMonth: number;
@@ -269,29 +263,24 @@ function GrowthIndicator({ value, suffix }: GrowthIndicatorProps): React.ReactEl
   );
 }
 
-// ===========================================
-// CHARTS
-// ===========================================
-
-interface MonthlyTrendChartProps {
+interface TrendChartProps {
   data: Array<{ month: string; amount: number; count: number }>;
   selectedPeriod: PeriodType;
   onPeriodChange: (period: PeriodType) => void;
 }
 
-function MonthlyTrendChart({
+function TrendChart({
   data,
   selectedPeriod,
   onPeriodChange,
-}: MonthlyTrendChartProps): React.ReactElement {
+}: TrendChartProps): React.ReactElement {
+  const isMonthly = selectedPeriod === 'monthly';
+
   return (
-    <Card className="lg:col-span-2">
+    <Card>
       <CardHeader>
         <div className="flex items-center justify-between">
-          <div>
-            <CardTitle>Trend Top-Up Bulanan</CardTitle>
-            <CardDescription>Fluktuasi top-up RFID per bulan</CardDescription>
-          </div>
+          <CardTitle>{isMonthly ? 'Trend Top-Up Bulanan' : 'Trend Top-Up Tahunan'}</CardTitle>
           <Tabs
             value={selectedPeriod}
             onValueChange={(v) => onPeriodChange(v as PeriodType)}
@@ -322,7 +311,7 @@ function MonthlyTrendChart({
               <YAxis tickFormatter={formatChartAmount} className="text-xs" />
               <Tooltip
                 formatter={(value) => [formatCurrency(Number(value) || 0), 'Total Top-Up']}
-                labelFormatter={(label) => `Bulan: ${label}`}
+                labelFormatter={(label) => `${isMonthly ? 'Bulan' : 'Tahun'}: ${label}`}
               />
               <Area
                 type="monotone"
@@ -340,81 +329,18 @@ function MonthlyTrendChart({
   );
 }
 
-interface PlanUsageChartProps {
-  data: Array<{ name: string; value: number; color: string }>;
-  planUsage: PlanUsageStats;
-}
-
-function PlanUsageChart({ data, planUsage }: PlanUsageChartProps): React.ReactElement {
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Penggunaan per Plan</CardTitle>
-        <CardDescription>Distribusi transaksi berdasarkan metode</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <div className="h-[200px]">
-          <ResponsiveContainer width="100%" height="100%">
-            <PieChart>
-              <Pie
-                data={data}
-                cx="50%"
-                cy="50%"
-                innerRadius={50}
-                outerRadius={80}
-                paddingAngle={5}
-                dataKey="value"
-              >
-                {data.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.color} />
-                ))}
-              </Pie>
-              <Tooltip formatter={(value) => [`${value}%`, 'Persentase']} />
-            </PieChart>
-          </ResponsiveContainer>
-        </div>
-        <PlanUsageLegend planUsage={planUsage} />
-      </CardContent>
-    </Card>
-  );
-}
-
-interface PlanUsageLegendProps {
-  planUsage: PlanUsageStats;
-}
-
-function PlanUsageLegend({ planUsage }: PlanUsageLegendProps): React.ReactElement {
-  const items = [
-    { color: 'bg-blue-500', label: 'Plan A (Payment Gateway)', value: planUsage.planA.percentage },
-    { color: 'bg-purple-500', label: 'Plan B (Bank Webhook)', value: planUsage.planB.percentage },
-    { color: 'bg-green-500', label: 'Plan C (File Import)', value: planUsage.planC.percentage },
-  ];
-
-  return (
-    <div className="space-y-2 mt-4">
-      {items.map((item, idx) => (
-        <div key={idx} className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className={`h-3 w-3 rounded-full ${item.color}`} />
-            <span className="text-sm">{item.label}</span>
-          </div>
-          <span className="font-medium">{item.value}%</span>
-        </div>
-      ))}
-    </div>
-  );
-}
-
 interface TransactionCountChartProps {
   data: Array<{ month: string; amount: number; count: number }>;
+  selectedPeriod: PeriodType;
 }
 
-function TransactionCountChart({ data }: TransactionCountChartProps): React.ReactElement {
+function TransactionCountChart({ data, selectedPeriod }: TransactionCountChartProps): React.ReactElement {
+  const isMonthly = selectedPeriod === 'monthly';
+
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Jumlah Transaksi per Bulan</CardTitle>
-        <CardDescription>Perbandingan jumlah transaksi setiap bulan</CardDescription>
+        <CardTitle>{isMonthly ? 'Jumlah Transaksi per Bulan' : 'Jumlah Transaksi per Tahun'}</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="h-[250px]">
@@ -425,9 +351,9 @@ function TransactionCountChart({ data }: TransactionCountChartProps): React.Reac
               <YAxis className="text-xs" />
               <Tooltip
                 formatter={(value) => [value, 'Transaksi']}
-                labelFormatter={(label) => `Bulan: ${label}`}
+                labelFormatter={(label) => `${isMonthly ? 'Bulan' : 'Tahun'}: ${label}`}
               />
-              <Bar dataKey="count" fill="#8B5CF6" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="count" fill="#3B82F6" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -436,9 +362,76 @@ function TransactionCountChart({ data }: TransactionCountChartProps): React.Reac
   );
 }
 
-// ===========================================
-// TOP CUSTOMERS TABLE
-// ===========================================
+const REGION_COLORS = [
+  'bg-red-500',
+  'bg-orange-500',
+  'bg-yellow-500',
+  'bg-green-500',
+  'bg-blue-500',
+  'bg-indigo-500',
+  'bg-purple-500',
+];
+
+interface RegionSummaryTableProps {
+  regions: RegionSummary[];
+}
+
+function RegionSummaryTable({ regions }: RegionSummaryTableProps): React.ReactElement {
+  const totalAmount = regions.reduce((sum, r) => sum + r.totalAmount, 0);
+
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex items-center gap-3">
+          <div className="h-10 w-10 rounded-full bg-orange-100 dark:bg-orange-900 flex items-center justify-center">
+            <Target className="h-5 w-5 text-orange-600" />
+          </div>
+          <div>
+            <CardTitle>Summary per Region</CardTitle>
+            <p className="text-sm text-muted-foreground">Ringkasan transaksi dan customer per region</p>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Region</TableHead>
+              <TableHead className="text-right">Total Top-Up</TableHead>
+              <TableHead className="text-center">Trx</TableHead>
+              <TableHead className="text-center">%</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {regions.map((region, index) => (
+              <TableRow key={region.regionCode}>
+                <TableCell>
+                  <div className="flex items-center gap-2">
+                    <span className={`h-2.5 w-2.5 rounded-full ${REGION_COLORS[index % REGION_COLORS.length]}`} />
+                    <span className="font-medium">R{region.regionCode} {region.regionName}</span>
+                  </div>
+                </TableCell>
+                <TableCell className="text-right font-medium">
+                  {formatCurrency(region.totalAmount)}
+                </TableCell>
+                <TableCell className="text-center">{region.transactionCount}</TableCell>
+                <TableCell className="text-center">
+                  <Badge variant="secondary" className="bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300">
+                    {region.percentage}%
+                  </Badge>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+        <div className="flex items-center justify-between mt-4 pt-4 border-t">
+          <span className="text-sm font-medium text-muted-foreground">Total Semua Region:</span>
+          <span className="text-lg font-bold">{formatCurrency(totalAmount)}</span>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
 
 interface TopCustomersTableProps {
   customers: CustomerAnalytics[];
@@ -448,8 +441,7 @@ function TopCustomersTable({ customers }: TopCustomersTableProps): React.ReactEl
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Top 5 Customer</CardTitle>
-        <CardDescription>Pelanggan dengan top-up tertinggi</CardDescription>
+        <CardTitle>Top {customers.length} Customer</CardTitle>
       </CardHeader>
       <CardContent>
         <Table>
@@ -482,107 +474,6 @@ function TopCustomersTable({ customers }: TopCustomersTableProps): React.ReactEl
             ))}
           </TableBody>
         </Table>
-      </CardContent>
-    </Card>
-  );
-}
-
-// ===========================================
-// PLAN SUMMARY CARDS
-// ===========================================
-
-interface PlanSummaryCardsProps {
-  planUsage: PlanUsageStats;
-}
-
-function PlanSummaryCards({ planUsage }: PlanSummaryCardsProps): React.ReactElement {
-  const plans = [
-    {
-      name: 'Plan A',
-      subtitle: 'Payment Gateway',
-      icon: CreditCard,
-      data: planUsage.planA,
-      borderColor: 'border-blue-200',
-      bgColor: 'bg-blue-50/50 dark:bg-blue-950/20',
-      iconBgColor: 'bg-blue-100',
-      iconColor: 'text-blue-600',
-    },
-    {
-      name: 'Plan B',
-      subtitle: 'Bank Webhook',
-      icon: Building2,
-      data: planUsage.planB,
-      borderColor: 'border-purple-200',
-      bgColor: 'bg-purple-50/50 dark:bg-purple-950/20',
-      iconBgColor: 'bg-purple-100',
-      iconColor: 'text-purple-600',
-    },
-    {
-      name: 'Plan C',
-      subtitle: 'File Import',
-      icon: FileSpreadsheet,
-      data: planUsage.planC,
-      borderColor: 'border-green-200',
-      bgColor: 'bg-green-50/50 dark:bg-green-950/20',
-      iconBgColor: 'bg-green-100',
-      iconColor: 'text-green-600',
-    },
-  ];
-
-  return (
-    <div className="grid gap-4 md:grid-cols-3">
-      {plans.map((plan) => (
-        <PlanSummaryCard key={plan.name} {...plan} />
-      ))}
-    </div>
-  );
-}
-
-interface PlanSummaryCardProps {
-  name: string;
-  subtitle: string;
-  icon: LucideIcon;
-  data: { count: number; amount: number };
-  borderColor: string;
-  bgColor: string;
-  iconBgColor: string;
-  iconColor: string;
-}
-
-function PlanSummaryCard({
-  name,
-  subtitle,
-  icon: Icon,
-  data,
-  borderColor,
-  bgColor,
-  iconBgColor,
-  iconColor,
-}: PlanSummaryCardProps): React.ReactElement {
-  return (
-    <Card className={`${borderColor} ${bgColor}`}>
-      <CardContent className="pt-6">
-        <div className="flex items-center gap-3 mb-4">
-          <div
-            className={`h-10 w-10 rounded-full ${iconBgColor} flex items-center justify-center`}
-          >
-            <Icon className={`h-5 w-5 ${iconColor}`} />
-          </div>
-          <div>
-            <p className="font-semibold">{name}</p>
-            <p className="text-sm text-muted-foreground">{subtitle}</p>
-          </div>
-        </div>
-        <div className="space-y-2">
-          <div className="flex justify-between">
-            <span className="text-sm text-muted-foreground">Total Amount</span>
-            <span className="font-medium">{formatCurrency(data.amount)}</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-sm text-muted-foreground">Transaksi</span>
-            <span className="font-medium">{data.count}</span>
-          </div>
-        </div>
       </CardContent>
     </Card>
   );

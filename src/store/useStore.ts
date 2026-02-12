@@ -1,48 +1,24 @@
 import { create } from 'zustand';
-import {
-  Customer,
-  WebreportSubmission,
-  BankStatement,
-  MatchingResult,
-  Transaction,
-  DashboardStats,
-} from '@/types';
-import { mockCustomer, mockCustomers } from '@/data/mock-data';
+import { Customer, Transaction, DashboardStats } from '@/types';
+import { mockCustomer, mockCustomers, initialTransactions, PENDING_EXPIRY_MINUTES } from '@/data/mock-data';
 
 // ===========================================
 // STORE INTERFACE
 // ===========================================
 
-interface AutomationEngineState {
+interface AppState {
   // Data
   customer: Customer;
   customers: Customer[];
-  webreportSubmissions: WebreportSubmission[];
-  bankStatements: BankStatement[];
-  matchingResults: MatchingResult[];
   transactions: Transaction[];
 
-  // Webreport Actions
-  addWebreportSubmission: (submission: Omit<WebreportSubmission, 'id' | 'createdAt' | 'updatedAt' | 'status'>) => WebreportSubmission;
-  updateWebreportStatus: (id: string, status: WebreportSubmission['status'], matchedId?: string) => void;
-
-  // Bank Statement Actions
-  addBankStatement: (statement: Omit<BankStatement, 'id' | 'createdAt' | 'updatedAt' | 'status'>) => BankStatement;
-  addBankStatements: (statements: Omit<BankStatement, 'id' | 'createdAt' | 'updatedAt' | 'status'>[]) => BankStatement[];
-  updateBankStatementStatus: (id: string, status: BankStatement['status'], matchedId?: string) => void;
-
-  // Matching Actions
-  addMatchingResult: (result: Omit<MatchingResult, 'id' | 'createdAt' | 'updatedAt'>) => MatchingResult;
-  updateMatchingStatus: (id: string, status: MatchingResult['status'], verifiedBy?: string, notes?: string) => void;
-
-  // Transaction Actions
-  addTransaction: (transaction: Omit<Transaction, 'id' | 'createdAt' | 'updatedAt'>) => Transaction;
+  // Actions
+  submitTopup: (amount: number, bankCode: string, notes?: string) => Transaction;
   updateCustomerBalance: (customerId: string, amount: number) => void;
+  confirmTransaction: (txId: string) => void;
+  expireTransactions: () => void;
 
   // Getters
-  getPendingWebreports: () => WebreportSubmission[];
-  getPendingBankStatements: () => BankStatement[];
-  getPendingMatches: () => MatchingResult[];
   getDashboardStats: () => DashboardStats;
 }
 
@@ -58,138 +34,79 @@ export function generateId(prefix: string): string {
 // STORE IMPLEMENTATION
 // ===========================================
 
-export const useStore = create<AutomationEngineState>((set, get) => ({
+export const useStore = create<AppState>((set, get) => ({
   // Initial Data
   customer: { ...mockCustomer },
   customers: [...mockCustomers],
-  webreportSubmissions: [],
-  bankStatements: [],
-  matchingResults: [],
-  transactions: [],
+  transactions: [...initialTransactions],
 
-  // Webreport Actions
-  addWebreportSubmission: (submission) => {
+  // Submit Top-Up: creates a PENDING transaction (balance not updated yet)
+  submitTopup: (amount, bankCode, notes) => {
+    const state = get();
     const now = new Date().toISOString();
-    const newSubmission: WebreportSubmission = {
-      ...submission,
-      id: generateId('WR'),
-      status: 'pending',
-      createdAt: now,
-      updatedAt: now,
-    };
-    set((state) => ({
-      webreportSubmissions: [newSubmission, ...state.webreportSubmissions],
-    }));
-    return newSubmission;
-  },
-
-  updateWebreportStatus: (id, status, matchedId) => {
-    set((state) => ({
-      webreportSubmissions: state.webreportSubmissions.map((s) =>
-        s.id === id
-          ? {
-              ...s,
-              status,
-              matchedWithBankStatementId: matchedId || s.matchedWithBankStatementId,
-              updatedAt: new Date().toISOString(),
-            }
-          : s
-      ),
-    }));
-  },
-
-  // Bank Statement Actions
-  addBankStatement: (statement) => {
-    const now = new Date().toISOString();
-    const newStatement: BankStatement = {
-      ...statement,
-      id: generateId('BS'),
-      status: 'pending',
-      createdAt: now,
-      updatedAt: now,
-    };
-    set((state) => ({
-      bankStatements: [newStatement, ...state.bankStatements],
-    }));
-    return newStatement;
-  },
-
-  addBankStatements: (statements) => {
-    const now = new Date().toISOString();
-    const newStatements: BankStatement[] = statements.map((s) => ({
-      ...s,
-      id: generateId('BS'),
-      status: 'pending' as const,
-      createdAt: now,
-      updatedAt: now,
-    }));
-    set((state) => ({
-      bankStatements: [...newStatements, ...state.bankStatements],
-    }));
-    return newStatements;
-  },
-
-  updateBankStatementStatus: (id, status, matchedId) => {
-    set((state) => ({
-      bankStatements: state.bankStatements.map((s) =>
-        s.id === id
-          ? {
-              ...s,
-              status,
-              matchedWithWebreportId: matchedId || s.matchedWithWebreportId,
-              updatedAt: new Date().toISOString(),
-            }
-          : s
-      ),
-    }));
-  },
-
-  // Matching Actions
-  addMatchingResult: (result) => {
-    const now = new Date().toISOString();
-    const newResult: MatchingResult = {
-      ...result,
-      id: generateId('MR'),
-      createdAt: now,
-      updatedAt: now,
-    };
-    set((state) => ({
-      matchingResults: [newResult, ...state.matchingResults],
-    }));
-    return newResult;
-  },
-
-  updateMatchingStatus: (id, status, verifiedBy, notes) => {
-    const now = new Date().toISOString();
-    set((state) => ({
-      matchingResults: state.matchingResults.map((m) =>
-        m.id === id
-          ? {
-              ...m,
-              status,
-              verifiedBy: verifiedBy || m.verifiedBy,
-              verifiedAt: status === 'verified' || status === 'rejected' ? now : m.verifiedAt,
-              notes: notes || m.notes,
-              updatedAt: now,
-            }
-          : m
-      ),
-    }));
-  },
-
-  // Transaction Actions
-  addTransaction: (transaction) => {
-    const now = new Date().toISOString();
+    const expiresAt = new Date(Date.now() + PENDING_EXPIRY_MINUTES * 60000).toISOString();
     const newTransaction: Transaction = {
-      ...transaction,
       id: generateId('TRX'),
+      customerId: state.customer.id,
+      customerName: state.customer.companyName,
+      virtualAccountNumber: state.customer.virtualAccountNumber,
+      amount,
+      status: 'pending',
+      paymentMethod: 'Virtual Account',
+      bankCode,
       createdAt: now,
       updatedAt: now,
+      expiresAt,
     };
-    set((state) => ({
-      transactions: [newTransaction, ...state.transactions],
+
+    set((s) => ({
+      transactions: [newTransaction, ...s.transactions],
     }));
+
+    // Suppress unused variable warning - notes is accepted but not stored in prototype
+    void notes;
+
     return newTransaction;
+  },
+
+  // Confirm a pending transaction → success + update balance
+  confirmTransaction: (txId) => {
+    const state = get();
+    const tx = state.transactions.find((t) => t.id === txId);
+    if (!tx || tx.status !== 'pending') return;
+
+    const now = new Date().toISOString();
+    set((s) => ({
+      transactions: s.transactions.map((t) =>
+        t.id === txId ? { ...t, status: 'success' as const, updatedAt: now } : t
+      ),
+      customer:
+        s.customer.id === tx.customerId
+          ? { ...s.customer, balance: s.customer.balance + tx.amount }
+          : s.customer,
+      customers: s.customers.map((c) =>
+        c.id === tx.customerId ? { ...c, balance: c.balance + tx.amount } : c
+      ),
+    }));
+  },
+
+  // Auto-expire pending transactions past their deadline
+  expireTransactions: () => {
+    const now = new Date().toISOString();
+    set((s) => {
+      const hasExpired = s.transactions.some(
+        (t) => t.status === 'pending' && t.expiresAt && t.expiresAt < now
+      );
+      if (!hasExpired) return s;
+
+      return {
+        transactions: s.transactions.map((t) =>
+          t.status === 'pending' && t.expiresAt && t.expiresAt < now
+            ? { ...t, status: 'failed' as const, updatedAt: now }
+            : t
+        ),
+      };
+    });
   },
 
   updateCustomerBalance: (customerId, amount) => {
@@ -205,40 +122,33 @@ export const useStore = create<AutomationEngineState>((set, get) => ({
   },
 
   // Getters
-  getPendingWebreports: () => {
-    return get().webreportSubmissions.filter((s) => s.status === 'pending');
-  },
-
-  getPendingBankStatements: () => {
-    return get().bankStatements.filter((s) => s.status === 'pending');
-  },
-
-  getPendingMatches: () => {
-    return get().matchingResults.filter(
-      (m) => m.status === 'auto_matched' || m.status === 'manual_review'
-    );
-  },
-
   getDashboardStats: () => {
     const state = get();
     const today = new Date().toISOString().split('T')[0];
+    const thisMonth = new Date().getMonth();
+    const thisYear = new Date().getFullYear();
+
+    const todayTransactions = state.transactions.filter(
+      (t) => t.status === 'success' && t.createdAt.startsWith(today)
+    );
+
+    const thisMonthTransactions = state.transactions.filter((t) => {
+      if (t.status !== 'success') return false;
+      const d = new Date(t.createdAt);
+      return d.getMonth() === thisMonth && d.getFullYear() === thisYear;
+    });
+
+    const uniqueCustomers = new Set(
+      state.transactions
+        .filter((t) => t.status === 'success')
+        .map((t) => t.customerId)
+    );
 
     return {
-      pendingWebreports: state.webreportSubmissions.filter((s) => s.status === 'pending').length,
-      pendingBankStatements: state.bankStatements.filter((s) => s.status === 'pending').length,
-      pendingMatches: state.matchingResults.filter(
-        (m) => m.status === 'auto_matched' || m.status === 'manual_review'
-      ).length,
-      autoMatchedToday: state.matchingResults.filter(
-        (m) => m.status === 'auto_matched' && m.createdAt.startsWith(today)
-      ).length,
-      manualReviewNeeded: state.matchingResults.filter((m) => m.status === 'manual_review').length,
-      verifiedToday: state.matchingResults.filter(
-        (m) => m.status === 'verified' && m.verifiedAt?.startsWith(today)
-      ).length,
-      totalAmountToday: state.transactions
-        .filter((t) => t.status === 'success' && t.createdAt.startsWith(today))
-        .reduce((sum, t) => sum + t.amount, 0),
+      totalTransactionsToday: todayTransactions.length,
+      totalAmountToday: todayTransactions.reduce((sum, t) => sum + t.amount, 0),
+      transactionsThisMonth: thisMonthTransactions.length,
+      activeCustomers: uniqueCustomers.size,
     };
   },
 }));

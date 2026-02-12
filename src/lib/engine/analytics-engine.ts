@@ -2,10 +2,12 @@ import { Transaction, Customer } from '@/types';
 import {
   CustomerAnalytics,
   DashboardAnalytics,
-  PlanUsageStats,
+  RegionSummary,
+  XenditUsageStats,
   TrendChartData,
   TopupSummary,
 } from '@/types/analytics';
+import { PERTAMINA_REGIONS } from '@/data/regions';
 
 // ===========================================
 // CONSTANTS
@@ -60,6 +62,28 @@ export function generateMockYearlyTrend(years: number = 3): TrendChartData[] {
   return data;
 }
 
+export function generateMockRegionSummary(): RegionSummary[] {
+  const mockData: { amount: number; count: number }[] = [
+    { amount: 180000000, count: 15 },  // R1 Sumbagut
+    { amount: 150000000, count: 12 },  // R2 Sumbagsel
+    { amount: 420000000, count: 35 },  // R3 Jakarta Banten
+    { amount: 340000000, count: 28 },  // R4 Jawa Bagian Barat
+    { amount: 220000000, count: 18 },  // R5 Jawa Bagian Tengah
+    { amount: 280000000, count: 22 },  // R6 Jatimbalinus
+    { amount: 120000000, count: 10 },  // R7 Indonesia Bagian Timur
+  ];
+
+  const totalAmount = mockData.reduce((sum, d) => sum + d.amount, 0);
+
+  return PERTAMINA_REGIONS.map((region, i) => ({
+    regionCode: region.code,
+    regionName: region.shortName,
+    totalAmount: mockData[i].amount,
+    transactionCount: mockData[i].count,
+    percentage: Math.round((mockData[i].amount / totalAmount) * 100),
+  }));
+}
+
 // ===========================================
 // ANALYTICS CALCULATIONS
 // ===========================================
@@ -74,11 +98,12 @@ export function calculateDashboardAnalytics(
   const totalLastMonth = sumTransactionAmounts(lastMonthTransactions);
 
   const growthPercentage = calculateGrowthPercentage(totalThisMonth, totalLastMonth);
-  const planUsage = calculatePlanUsage(transactions);
+  const xenditUsage = calculateXenditUsage(transactions);
   const topCustomers = calculateTopCustomers(transactions, customers);
 
   const monthlyTrend = generateMockMonthlyTrend(12);
   const yearlyTrend = generateMockYearlyTrend(3);
+  const regionSummary = generateMockRegionSummary();
 
   return {
     summary: buildSummary(
@@ -93,7 +118,8 @@ export function calculateDashboardAnalytics(
     monthlyTrend: transformToTopupSummary(monthlyTrend, 'monthly'),
     yearlyTrend: transformToTopupSummary(yearlyTrend, 'yearly'),
     topCustomers,
-    planUsage,
+    xenditUsage,
+    regionSummary,
   };
 }
 
@@ -168,38 +194,20 @@ function transformToTopupSummary(
   }));
 }
 
-function calculatePlanUsage(transactions: Transaction[]): PlanUsageStats {
+function calculateXenditUsage(transactions: Transaction[]): XenditUsageStats {
   const successTransactions = transactions.filter((t) => t.status === 'success');
-  const total = successTransactions.length || 1;
 
-  // Return mock data for demo if no transactions
   if (successTransactions.length === 0) {
     return {
-      planA: { count: 45, amount: 750000000, percentage: 45 },
-      planB: { count: 35, amount: 580000000, percentage: 35 },
-      planC: { count: 20, amount: 330000000, percentage: 20 },
+      xendit: { count: 0, amount: 0, percentage: 100 },
     };
   }
 
-  const planA = successTransactions.filter((t) => t.sourcePlan === 'A');
-  const planB = successTransactions.filter((t) => t.sourcePlan === 'B');
-  const planC = successTransactions.filter((t) => t.sourcePlan === 'C');
-
   return {
-    planA: {
-      count: planA.length,
-      amount: sumTransactionAmounts(planA),
-      percentage: Math.round((planA.length / total) * 100),
-    },
-    planB: {
-      count: planB.length,
-      amount: sumTransactionAmounts(planB),
-      percentage: Math.round((planB.length / total) * 100),
-    },
-    planC: {
-      count: planC.length,
-      amount: sumTransactionAmounts(planC),
-      percentage: Math.round((planC.length / total) * 100),
+    xendit: {
+      count: successTransactions.length,
+      amount: sumTransactionAmounts(successTransactions),
+      percentage: 100,
     },
   };
 }

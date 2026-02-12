@@ -24,22 +24,20 @@ export interface CustomerAnalytics {
   monthlyTrend: TopupSummary[];
 }
 
-export interface PlanUsageStats {
-  planA: {
+export interface XenditUsageStats {
+  xendit: {
     count: number;
     amount: number;
     percentage: number;
   };
-  planB: {
-    count: number;
-    amount: number;
-    percentage: number;
-  };
-  planC: {
-    count: number;
-    amount: number;
-    percentage: number;
-  };
+}
+
+export interface RegionSummary {
+  regionCode: number;
+  regionName: string;
+  totalAmount: number;
+  transactionCount: number;
+  percentage: number;
 }
 
 export interface DashboardAnalytics {
@@ -55,7 +53,8 @@ export interface DashboardAnalytics {
   monthlyTrend: TopupSummary[];
   yearlyTrend: TopupSummary[];
   topCustomers: CustomerAnalytics[];
-  planUsage: PlanUsageStats;
+  xenditUsage: XenditUsageStats;
+  regionSummary: RegionSummary[];
 }
 
 // Chart data types

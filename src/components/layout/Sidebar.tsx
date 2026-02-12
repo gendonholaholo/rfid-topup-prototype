@@ -10,8 +10,6 @@ import {
   History,
   Home,
   BarChart3,
-  Plug,
-  GitCompare,
   Receipt,
   Users,
 } from 'lucide-react';
@@ -33,9 +31,7 @@ const customerNavItems: NavItem[] = [
 
 const adminNavItems: NavItem[] = [
   { href: '/admin', label: 'Dashboard', icon: Home },
-  { href: '/admin/dashboard', label: 'Analytics', icon: BarChart3, badge: 'NEW' },
-  { href: '/admin/integration', label: 'Integration Hub', icon: Plug, badge: 'NEW' },
-  { href: '/admin/matching', label: 'Matching Engine', icon: GitCompare },
+  { href: '/admin/dashboard', label: 'Analytics', icon: BarChart3 },
   { href: '/admin/transactions', label: 'Transaksi', icon: Receipt },
   { href: '/admin/customers', label: 'Pelanggan', icon: Users },
 ];

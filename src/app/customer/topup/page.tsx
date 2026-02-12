@@ -1,85 +1,89 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useStore } from '@/store/useStore';
-import { formatCurrency, bankCodes } from '@/data/mock-data';
+import { formatCurrency, bankCodes, PENDING_EXPIRY_MINUTES } from '@/data/mock-data';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import Link from 'next/link';
 import {
   CreditCard,
   ArrowRight,
-  CheckCircle2,
   Clock,
-  Upload,
   Building2,
-  Calendar,
   FileText,
+  CheckCircle2,
 } from 'lucide-react';
+import { Transaction } from '@/types';
 
-type Step = 'form' | 'confirm' | 'success';
+type Step = 'form' | 'confirm' | 'pending' | 'success';
 
 export default function TopUpPage() {
   const customer = useStore((state) => state.customer);
-  const addWebreportSubmission = useStore((state) => state.addWebreportSubmission);
+  const submitTopup = useStore((state) => state.submitTopup);
+  const confirmTransaction = useStore((state) => state.confirmTransaction);
 
   const [step, setStep] = useState<Step>('form');
   const [amount, setAmount] = useState('');
-  const [bankSender, setBankSender] = useState('');
-  const [transferDate, setTransferDate] = useState(new Date().toISOString().split('T')[0]);
+  const [bankCode, setBankCode] = useState('');
   const [notes, setNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submissionId, setSubmissionId] = useState('');
+  const [submittedTx, setSubmittedTx] = useState<Transaction | null>(null);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    };
+  }, []);
 
   const quickAmounts = [1000000, 2000000, 5000000, 10000000];
 
   const handleSubmit = () => {
-    if (!amount || !bankSender || !transferDate) return;
+    if (!amount || !bankCode) return;
     setStep('confirm');
   };
 
   const handleConfirmSubmit = async () => {
     setIsSubmitting(true);
-
-    // Simulate API call delay
     await new Promise((resolve) => setTimeout(resolve, 1500));
 
-    const submission = addWebreportSubmission({
-      customerId: customer.id,
-      customerName: customer.companyName,
-      virtualAccountNumber: customer.virtualAccountNumber,
-      amount: Number(amount),
-      transferDate: new Date(transferDate).toISOString(),
-      bankSender,
-      notes: notes || undefined,
-    });
-
-    setSubmissionId(submission.id);
+    const transaction = submitTopup(Number(amount), bankCode, notes || undefined);
+    setSubmittedTx(transaction);
     setIsSubmitting(false);
-    setStep('success');
+    setStep('pending');
+
+    // Simulate Xendit webhook callback after ~5 seconds
+    timeoutRef.current = setTimeout(() => {
+      confirmTransaction(transaction.id);
+      setStep('success');
+    }, 5000);
   };
 
   const handleReset = () => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
     setStep('form');
     setAmount('');
-    setBankSender('');
-    setTransferDate(new Date().toISOString().split('T')[0]);
+    setBankCode('');
     setNotes('');
-    setSubmissionId('');
+    setSubmittedTx(null);
   };
+
+  const expiryTime = submittedTx?.expiresAt
+    ? new Date(submittedTx.expiresAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })
+    : '';
 
   return (
     <MainLayout userType="customer">
       <div className="max-w-2xl mx-auto space-y-6">
-        {/* Header */}
-        <div>
-          <h1 className="text-2xl font-bold">Lapor Top-Up Saldo</h1>
-          <p className="text-muted-foreground">
-            Laporkan transfer top-up saldo RFID Anda
-          </p>
-        </div>
+        <h1 className="text-2xl font-bold">Top-Up Saldo</h1>
 
         {/* VA Info Card */}
         <Card className="bg-gradient-to-r from-blue-600 to-blue-800 text-white">
@@ -100,17 +104,17 @@ export default function TopUpPage() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Upload className="h-5 w-5" />
-                Form Pelaporan Transfer
+                <CreditCard className="h-5 w-5" />
+                Form Top-Up Saldo
               </CardTitle>
               <CardDescription>
-                Isi detail transfer yang sudah Anda lakukan
+                Pilih bank penerima dan nominal top-up
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               {/* Amount */}
               <div className="space-y-2">
-                <label className="text-sm font-medium">Nominal Transfer</label>
+                <label className="text-sm font-medium">Nominal Top-Up</label>
                 <Input
                   type="number"
                   placeholder="Masukkan nominal"
@@ -133,15 +137,15 @@ export default function TopUpPage() {
                 </div>
               </div>
 
-              {/* Bank Sender */}
+              {/* Bank */}
               <div className="space-y-2">
                 <label className="text-sm font-medium flex items-center gap-2">
                   <Building2 className="h-4 w-4" />
-                  Bank Pengirim
+                  Bank Penerima
                 </label>
                 <select
-                  value={bankSender}
-                  onChange={(e) => setBankSender(e.target.value)}
+                  value={bankCode}
+                  onChange={(e) => setBankCode(e.target.value)}
                   className="w-full h-10 px-3 rounded-md border border-input bg-background"
                 >
                   <option value="">Pilih bank...</option>
@@ -153,20 +157,6 @@ export default function TopUpPage() {
                 </select>
               </div>
 
-              {/* Transfer Date */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium flex items-center gap-2">
-                  <Calendar className="h-4 w-4" />
-                  Tanggal Transfer
-                </label>
-                <Input
-                  type="date"
-                  value={transferDate}
-                  onChange={(e) => setTransferDate(e.target.value)}
-                  max={new Date().toISOString().split('T')[0]}
-                />
-              </div>
-
               {/* Notes */}
               <div className="space-y-2">
                 <label className="text-sm font-medium flex items-center gap-2">
@@ -174,7 +164,7 @@ export default function TopUpPage() {
                   Catatan (Opsional)
                 </label>
                 <Input
-                  placeholder="Contoh: Transfer untuk top-up bulan Januari"
+                  placeholder="Contoh: Top-up bulan Februari"
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
                 />
@@ -183,7 +173,7 @@ export default function TopUpPage() {
               {/* Submit Button */}
               <Button
                 onClick={handleSubmit}
-                disabled={!amount || !bankSender || !transferDate}
+                disabled={!amount || !bankCode}
                 className="w-full"
                 size="lg"
               >
@@ -198,7 +188,7 @@ export default function TopUpPage() {
         {step === 'confirm' && (
           <Card>
             <CardHeader>
-              <CardTitle>Konfirmasi Pelaporan</CardTitle>
+              <CardTitle>Konfirmasi Top-Up</CardTitle>
               <CardDescription>
                 Pastikan data berikut sudah benar
               </CardDescription>
@@ -214,12 +204,8 @@ export default function TopUpPage() {
                   <span className="font-bold text-lg">{formatCurrency(Number(amount))}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Bank Pengirim</span>
-                  <span>{bankCodes.find((b) => b.code === bankSender)?.name}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Tanggal Transfer</span>
-                  <span>{new Date(transferDate).toLocaleDateString('id-ID')}</span>
+                  <span className="text-muted-foreground">Bank Penerima</span>
+                  <span>{bankCodes.find((b) => b.code === bankCode)?.name}</span>
                 </div>
                 {notes && (
                   <div className="flex justify-between">
@@ -234,7 +220,61 @@ export default function TopUpPage() {
                   Kembali
                 </Button>
                 <Button onClick={handleConfirmSubmit} disabled={isSubmitting} className="flex-1">
-                  {isSubmitting ? 'Mengirim...' : 'Kirim Laporan'}
+                  {isSubmitting ? 'Memproses...' : 'Bayar Sekarang'}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Step: Pending */}
+        {step === 'pending' && (
+          <Card className="border-yellow-200 bg-yellow-50 dark:bg-yellow-950/20">
+            <CardContent className="p-6 text-center space-y-4">
+              <div className="flex justify-center">
+                <div className="h-16 w-16 rounded-full bg-yellow-100 dark:bg-yellow-900 flex items-center justify-center">
+                  <Clock className="h-8 w-8 text-yellow-600" />
+                </div>
+              </div>
+
+              <div>
+                <h2 className="text-xl font-bold text-yellow-800 dark:text-yellow-200">
+                  Menunggu Pembayaran
+                </h2>
+                <p className="text-yellow-700 dark:text-yellow-300 mt-1">
+                  Silakan transfer ke Virtual Account sebelum pukul {expiryTime}.
+                  Transaksi akan otomatis dibatalkan jika melewati batas waktu ({PENDING_EXPIRY_MINUTES} menit).
+                </p>
+              </div>
+
+              <div className="bg-white dark:bg-background p-4 rounded-lg space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">ID Transaksi</span>
+                  <span className="font-mono font-medium">{submittedTx?.id}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Nominal</span>
+                  <span className="font-bold">{formatCurrency(Number(amount))}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Status</span>
+                  <Badge className="bg-yellow-500 gap-1">
+                    <Clock className="h-3 w-3" />
+                    Pending
+                  </Badge>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Batas Waktu</span>
+                  <span className="font-medium text-yellow-700">{expiryTime}</span>
+                </div>
+              </div>
+
+              <div className="flex gap-3">
+                <Button asChild variant="outline" className="flex-1">
+                  <Link href="/customer/history">Lihat Riwayat</Link>
+                </Button>
+                <Button onClick={handleReset} className="flex-1">
+                  Top-Up Lagi
                 </Button>
               </div>
             </CardContent>
@@ -253,17 +293,17 @@ export default function TopUpPage() {
 
               <div>
                 <h2 className="text-xl font-bold text-green-800 dark:text-green-200">
-                  Laporan Berhasil Dikirim!
+                  Pembayaran Berhasil!
                 </h2>
                 <p className="text-green-700 dark:text-green-300 mt-1">
-                  Laporan top-up Anda sedang diproses
+                  Saldo RFID Anda telah bertambah.
                 </p>
               </div>
 
               <div className="bg-white dark:bg-background p-4 rounded-lg space-y-2">
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">ID Laporan</span>
-                  <span className="font-mono font-medium">{submissionId}</span>
+                  <span className="text-muted-foreground">ID Transaksi</span>
+                  <span className="font-mono font-medium">{submittedTx?.id}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Nominal</span>
@@ -271,21 +311,21 @@ export default function TopUpPage() {
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Status</span>
-                  <Badge variant="secondary" className="gap-1">
-                    <Clock className="h-3 w-3" />
-                    Menunggu Verifikasi
+                  <Badge className="bg-green-500 gap-1">
+                    <CheckCircle2 className="h-3 w-3" />
+                    Success
                   </Badge>
                 </div>
               </div>
 
-              <p className="text-sm text-muted-foreground">
-                Saldo akan bertambah otomatis setelah sistem mencocokkan 
-                laporan Anda dengan data rekening koran bank.
-              </p>
-
-              <Button onClick={handleReset} className="w-full">
-                Buat Laporan Baru
-              </Button>
+              <div className="flex gap-3">
+                <Button asChild variant="outline" className="flex-1">
+                  <Link href="/customer/history">Lihat Riwayat</Link>
+                </Button>
+                <Button onClick={handleReset} className="flex-1">
+                  Top-Up Lagi
+                </Button>
+              </div>
             </CardContent>
           </Card>
         )}

@@ -1,19 +1,6 @@
 // ===========================================
 // STYLE HELPER UTILITIES
-// Helper functions to replace nested ternaries with clear mappings
 // ===========================================
-
-type Difficulty = 'easy' | 'medium' | 'hard';
-
-const DIFFICULTY_COLORS: Record<Difficulty, string> = {
-  easy: 'text-green-600',
-  medium: 'text-yellow-600',
-  hard: 'text-red-600',
-};
-
-export function getDifficultyColor(difficulty: Difficulty): string {
-  return DIFFICULTY_COLORS[difficulty];
-}
 
 // Ranking badge styles for top customers
 type RankPosition = 1 | 2 | 3;
