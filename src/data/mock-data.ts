@@ -57,6 +57,17 @@ export const mockCustomers: Customer[] = [
     createdAt: '2024-01-05T07:30:00.000Z',
     updatedAt: '2024-12-03T11:20:00.000Z',
   },
+  {
+    id: 'CUST-005',
+    companyName: 'PT Buana Karya Logistik',
+    email: 'finance@buanakarya.co.id',
+    phone: '021-5552468',
+    virtualAccountNumber: '8810012345678905',
+    balance: 15000000,
+    rfidCards: ['RFID-011', 'RFID-012'],
+    createdAt: '2024-04-01T08:00:00.000Z',
+    updatedAt: '2024-12-05T09:30:00.000Z',
+  },
 ];
 
 // ===========================================
@@ -154,6 +165,24 @@ export const mockRFIDCards: RFIDCard[] = [
     status: 'inactive',
     createdAt: '2024-02-15T10:00:00.000Z',
   },
+  {
+    id: 'RFID-011',
+    cardNumber: 'RFID-2024-011-A',
+    customerId: 'CUST-005',
+    vehiclePlate: 'B 2468 EFG',
+    vehicleType: 'Truk Box',
+    status: 'active',
+    createdAt: '2024-04-01T08:00:00.000Z',
+  },
+  {
+    id: 'RFID-012',
+    cardNumber: 'RFID-2024-012-A',
+    customerId: 'CUST-005',
+    vehiclePlate: 'B 1357 HIJ',
+    vehicleType: 'Pickup',
+    status: 'active',
+    createdAt: '2024-04-10T09:00:00.000Z',
+  },
 ];
 
 // ===========================================
@@ -185,6 +214,8 @@ export const mockRFIDCardBalances: Record<string, number> = {
   'RFID-008': 9500000,
   'RFID-009': 6300000,
   'RFID-010': 0,
+  'RFID-011': 4500000,
+  'RFID-012': 2700000,
 };
 
 // ===========================================
@@ -347,6 +378,30 @@ export const initialTransactions: Transaction[] = [
     bankCode: 'BNI',
     createdAt: '2026-02-11T08:00:00.000Z',
     updatedAt: '2026-02-11T08:30:00.000Z',
+  },
+  {
+    id: 'TRX-014',
+    customerId: 'CUST-005',
+    customerName: 'PT Buana Karya Logistik',
+    virtualAccountNumber: '8810012345678905',
+    amount: 15000000,
+    status: 'success',
+    paymentMethod: 'Virtual Account',
+    bankCode: 'BCA',
+    createdAt: '2026-01-18T10:00:00.000Z',
+    updatedAt: '2026-01-18T10:00:00.000Z',
+  },
+  {
+    id: 'TRX-015',
+    customerId: 'CUST-005',
+    customerName: 'PT Buana Karya Logistik',
+    virtualAccountNumber: '8810012345678905',
+    amount: 12000000,
+    status: 'success',
+    paymentMethod: 'Virtual Account',
+    bankCode: 'MANDIRI',
+    createdAt: '2026-02-08T11:30:00.000Z',
+    updatedAt: '2026-02-08T11:30:00.000Z',
   },
 ];
 
