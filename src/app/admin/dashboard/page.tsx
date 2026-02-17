@@ -35,6 +35,7 @@ import {
   ArrowUpRight,
   Calendar,
   Target,
+  Download,
   LucideIcon,
 } from 'lucide-react';
 import { useStore } from '@/store/useStore';
@@ -46,6 +47,7 @@ import {
   formatChartAmount,
 } from '@/lib/engine/analytics-engine';
 import { getRankBadgeStyle } from '@/lib/utils/style-helpers';
+import { downloadCSV, csvFilename } from '@/lib/utils/download-csv';
 import { CustomerAnalytics, RegionSummary } from '@/types/analytics';
 
 type PeriodType = 'monthly' | 'yearly';
@@ -66,7 +68,10 @@ export default function DashboardAnalyticsPage(): React.ReactElement {
   return (
     <MainLayout userType="admin">
       <div className="space-y-6">
-        <DashboardHeader />
+        <DashboardHeader
+          topCustomers={analytics.topCustomers}
+          regionSummary={analytics.regionSummary}
+        />
 
         <SummaryCards
           totalThisMonth={analytics.summary.totalTopupThisMonth}
@@ -128,14 +133,58 @@ export default function DashboardAnalyticsPage(): React.ReactElement {
   );
 }
 
-function DashboardHeader(): React.ReactElement {
+interface DashboardHeaderProps {
+  topCustomers: CustomerAnalytics[];
+  regionSummary: RegionSummary[];
+}
+
+function DashboardHeader({ topCustomers, regionSummary }: DashboardHeaderProps): React.ReactElement {
+  const handleDownload = () => {
+    type ReportRow = { section: string; label: string; value: string; extra: string };
+    const rows: ReportRow[] = [];
+
+    rows.push({ section: 'Top Customer', label: 'Perusahaan', value: 'Total Top-Up', extra: 'Jumlah Trx' });
+    topCustomers.forEach((c) => {
+      rows.push({
+        section: '',
+        label: c.companyName,
+        value: formatCurrency(c.totalTopup),
+        extra: String(c.transactionCount),
+      });
+    });
+
+    rows.push({ section: '', label: '', value: '', extra: '' });
+    rows.push({ section: 'Region', label: 'Nama Region', value: 'Total Top-Up', extra: 'Jumlah Trx' });
+    regionSummary.forEach((r) => {
+      rows.push({
+        section: '',
+        label: `R${r.regionCode} ${r.regionName}`,
+        value: formatCurrency(r.totalAmount),
+        extra: String(r.transactionCount),
+      });
+    });
+
+    downloadCSV(csvFilename('dashboard-report'), [
+      { header: 'Bagian', accessor: (r: ReportRow) => r.section },
+      { header: 'Label', accessor: (r: ReportRow) => r.label },
+      { header: 'Nilai', accessor: (r: ReportRow) => r.value },
+      { header: 'Detail', accessor: (r: ReportRow) => r.extra },
+    ], rows);
+  };
+
   return (
     <div className="flex items-center justify-between">
       <h1 className="text-2xl font-bold">Dashboard Analytics</h1>
-      <Button variant="outline" size="sm">
-        <Calendar className="mr-2 h-4 w-4" />
-        Februari 2026
-      </Button>
+      <div className="flex items-center gap-2">
+        <Button variant="outline" size="sm" onClick={handleDownload}>
+          <Download className="mr-2 h-4 w-4" />
+          Download
+        </Button>
+        <Button variant="outline" size="sm">
+          <Calendar className="mr-2 h-4 w-4" />
+          Februari 2026
+        </Button>
+      </div>
     </div>
   );
 }

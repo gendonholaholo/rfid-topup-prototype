@@ -3,12 +3,15 @@
 import { useCallback } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { DateFilter } from '@/components/ui/date-filter';
 import { TransactionStatusBadge } from '@/components/ui/status-badge';
-import { formatCurrency } from '@/data/mock-data';
+import { formatCurrency, formatDate } from '@/data/mock-data';
 import { useStore } from '@/store/useStore';
 import { useDateFilter } from '@/lib/hooks/useDateFilter';
-import { Clock, X, Check } from 'lucide-react';
+import { Clock, X, Check, Download } from 'lucide-react';
+import { downloadCSV, csvFilename, type CSVColumn } from '@/lib/utils/download-csv';
+import { Transaction } from '@/types';
 
 export default function HistoryPage() {
   const customer = useStore((state) => state.customer);
@@ -22,6 +25,17 @@ export default function HistoryPage() {
     (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
   );
 
+  const handleDownload = () => {
+    const columns: CSVColumn<Transaction>[] = [
+      { header: 'ID', accessor: (t) => t.id },
+      { header: 'Bank', accessor: (t) => t.bankCode },
+      { header: 'Nominal', accessor: (t) => t.amount },
+      { header: 'Status', accessor: (t) => t.status },
+      { header: 'Waktu', accessor: (t) => formatDate(t.createdAt) },
+    ];
+    downloadCSV(csvFilename('riwayat-transaksi'), columns, sorted);
+  };
+
   return (
     <MainLayout userType="customer">
       <div className="space-y-6">
@@ -34,7 +48,12 @@ export default function HistoryPage() {
           onDateToChange={setDateTo}
           onReset={reset}
           hasFilter={hasFilter}
-        />
+        >
+          <Button variant="outline" onClick={handleDownload}>
+            <Download className="mr-2 h-4 w-4" />
+            Download
+          </Button>
+        </DateFilter>
 
         <Card>
           <CardHeader>

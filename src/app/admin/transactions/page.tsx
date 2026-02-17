@@ -4,6 +4,7 @@ import { useState, useMemo, useCallback } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 import { TransactionStatusBadge } from '@/components/ui/status-badge';
 import {
   Table,
@@ -14,9 +15,12 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { DateFilter } from '@/components/ui/date-filter';
+import { Download } from 'lucide-react';
 import { formatCurrency, formatDate } from '@/data/mock-data';
 import { useStore } from '@/store/useStore';
 import { useDateFilter } from '@/lib/hooks/useDateFilter';
+import { downloadCSV, csvFilename, type CSVColumn } from '@/lib/utils/download-csv';
+import { Transaction } from '@/types';
 export default function AdminTransactionsPage() {
   const transactions = useStore((state) => state.transactions);
   const [searchQuery, setSearchQuery] = useState('');
@@ -47,6 +51,19 @@ export default function AdminTransactionsPage() {
   const totalAmount = filteredTransactions
     .filter((t) => t.status === 'success')
     .reduce((sum, t) => sum + t.amount, 0);
+
+  const handleDownload = () => {
+    const columns: CSVColumn<Transaction>[] = [
+      { header: 'ID', accessor: (t) => t.id },
+      { header: 'Pelanggan', accessor: (t) => t.customerName },
+      { header: 'Virtual Account', accessor: (t) => t.virtualAccountNumber },
+      { header: 'Bank', accessor: (t) => t.bankCode },
+      { header: 'Nominal', accessor: (t) => t.amount },
+      { header: 'Status', accessor: (t) => t.status },
+      { header: 'Waktu', accessor: (t) => formatDate(t.createdAt) },
+    ];
+    downloadCSV(csvFilename('transaksi'), columns, filteredTransactions);
+  };
 
   return (
     <MainLayout userType="admin">
@@ -103,6 +120,10 @@ export default function AdminTransactionsPage() {
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
+          <Button variant="outline" onClick={handleDownload}>
+            <Download className="mr-2 h-4 w-4" />
+            Download
+          </Button>
         </DateFilter>
 
         {/* Transactions Table */}

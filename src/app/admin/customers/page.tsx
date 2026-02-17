@@ -15,8 +15,11 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { Download } from 'lucide-react';
 import { useStore } from '@/store/useStore';
 import { mockRFIDCards, mockRFIDCardBalances, formatCurrency, formatDateShort } from '@/data/mock-data';
+import { downloadCSV, csvFilename, type CSVColumn } from '@/lib/utils/download-csv';
+import { Customer } from '@/types';
 
 export default function AdminCustomersPage() {
   const customers = useStore((state) => state.customers);
@@ -36,6 +39,20 @@ export default function AdminCustomersPage() {
   const totalBalance = filteredCustomers.reduce((sum, c) => sum + c.balance, 0);
   const totalCards = filteredCustomers.reduce((sum, c) => sum + c.rfidCards.length, 0);
 
+  const handleDownload = () => {
+    const columns: CSVColumn<Customer>[] = [
+      { header: 'ID', accessor: (c) => c.id },
+      { header: 'Perusahaan', accessor: (c) => c.companyName },
+      { header: 'Email', accessor: (c) => c.email },
+      { header: 'Telepon', accessor: (c) => c.phone },
+      { header: 'Virtual Account', accessor: (c) => c.virtualAccountNumber },
+      { header: 'Saldo', accessor: (c) => c.balance },
+      { header: 'Jumlah Kartu RFID', accessor: (c) => c.rfidCards.length },
+      { header: 'Terdaftar', accessor: (c) => formatDateShort(c.createdAt) },
+    ];
+    downloadCSV(csvFilename('pelanggan'), columns, filteredCustomers);
+  };
+
   const toggleDetail = (customerId: string) => {
     setExpandedCustomer(expandedCustomer === customerId ? null : customerId);
   };
@@ -46,9 +63,15 @@ export default function AdminCustomersPage() {
         {/* Page Header */}
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold text-gray-900">Daftar Pelanggan</h1>
-          <Button className="bg-pertamina-red hover:bg-red-700">
-            + Tambah Pelanggan
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={handleDownload}>
+              <Download className="mr-2 h-4 w-4" />
+              Download
+            </Button>
+            <Button className="bg-pertamina-red hover:bg-red-700">
+              + Tambah Pelanggan
+            </Button>
+          </div>
         </div>
 
         {/* Stats */}
